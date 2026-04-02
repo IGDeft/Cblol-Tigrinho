@@ -1,10 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Body
 import uvicorn 
 from cblol import ordemPicksBans
 app = FastAPI()
 
 @app.post("/predict")
-def predfict(data: dict = Body(...)):
+def predict(data: dict = Body(...)):
+    print(f"Dados recebidos do Java: {data}")
     time_a = data.get("timeA")
     time_b = data.get("timeB")
     jogos = data.get("quantidadeJogos")

@@ -1,0 +1,19 @@
+package com.lol.draft_lol.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.lol.draft_lol.DTO.DraftRequestDto;
+import com.lol.draft_lol.client.PythonDraftClient;
+
+@Service
+public class DraftService {
+  
+  @Autowired
+  private PythonDraftClient pythonClient;
+
+  public Object gerarDraft(DraftRequestDto dados){
+    System.out.println("Enviando: " + dados);
+    return pythonClient.preverDraft(dados);
+  }
+}
