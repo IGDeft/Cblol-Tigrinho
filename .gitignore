@@ -15,4 +15,5 @@ mvnw.cmd
 python/.venv/
 python/__pycache__/
 python/*.csv
+python/cblolV1.py
 python/cblol.py
