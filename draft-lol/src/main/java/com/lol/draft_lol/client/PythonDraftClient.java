@@ -14,6 +14,12 @@ public interface PythonDraftClient {
   @GetMapping("/")
   Object obterStatusHome();
 
+  @GetMapping("/ligas")
+  Object listarLigas();
+
+  @GetMapping("/times")
+  Object listarTimes();
+
   @PostMapping("/predict")
   Object preverDraft(@RequestBody DraftRequestDto dados);
 

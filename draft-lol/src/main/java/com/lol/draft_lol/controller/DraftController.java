@@ -29,8 +29,17 @@ public class DraftController {
   }
 
   @GetMapping("/python")
-  public Object testat(){
+  public Object testar(){
     return pythonClient.obterStatusHome();
+  }
+
+  @GetMapping("/ligas")
+  public Object ligas(){
+    return pythonClient.listarLigas();
+  }
+  @GetMapping("/times")
+  public Object times(){
+    return pythonClient.listarTimes();
   }
 
   @PostMapping("/prever")

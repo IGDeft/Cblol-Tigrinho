@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Body
+from fastapi import FastAPI, Body, Query
 import uvicorn 
 import cblol
 app = FastAPI()
@@ -19,8 +19,9 @@ def listar_ligas():
 
 
 @app.get("/times")
-def listar_times(data: dict = Body(...)):
-    ligas = data.get("ligas", "LTA S")
+def listar_times(ligas: list[str] = Query(None)):
+    if not ligas:
+        ligas = ["LTA S"]
     response = cblol.obter_times_liga(ligas)
     return {"times": response}
 
