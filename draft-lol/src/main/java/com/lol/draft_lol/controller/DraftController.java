@@ -47,4 +47,9 @@ public class DraftController {
     Object resultado = draftService.gerarDraft(request);
     return ResponseEntity.ok(resultado);
   }
+
+  @PostMapping("/draft/start")
+  public Object draftInicio(){
+    return 0;
+  }
 }

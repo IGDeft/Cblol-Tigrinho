@@ -1,7 +1,11 @@
 from fastapi import FastAPI, Body, Query
 import uvicorn 
 import cblol
+import uuid
+
 app = FastAPI()
+
+sessions = {}
 
 # GET
 @app.get("/")
@@ -36,4 +40,49 @@ def predict(data: dict = Body(...)):
     response = cblol.ordemPicksBans(time_a, time_b, jogos, [])
 
     return {"draft": response}
+
+@app.post("/draft/iniciar")
+def iniciar_draft(data: dict = Body(...)):
+    session_id = str(uuid.uuid4())
+
+    if(data["is_first_pick"]):
+        jogador_atual = "PLAYER"
+    else:
+        jogador_atual = "IA"
+
+    sessions[session_id] = {
+        "formato": data["formato"],
+        "is_first_pick": data["is_first_pick"],
+        "time_user": data["time_user"],
+        "time_ia": data["time_ia"],
+        "game_atual": 1,
+        "fase_atual": "BAN_1",
+        "jogador_atual": jogador_atual,
+        "bans": {"player": [], "ia": []},
+        "picks": {"player": [], "ia": []},
+    }
+    return {"sessionId": session_id, "faseAtual": "BAN_1", "jogadorAtual": jogador_atual}
+
+@app.post("/draft/acao")
+def acao_draft(data: dict = Body(...)):
+    state = sessions[data["sessionId"]]
+    is_ban = state["fase_atual"].startswith("BAN")
+    if(state["jogador_atual"] == "PLAYER"):
+        if(is_ban):
+            state["bans"]["player"].append(data["champion"])
+        else:
+            state["picks"]["player"].append(data["champion"])
+    else:
+        picks = state["picks"]["player"] + state["picks"]["ia"]
+        args = (
+            state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["time_user"], state["bans"]["player"], state["picks"]["player"], picks
+            )
+        if(is_ban):
+            champion = cblol.sugeriBans(*args)
+            state["bans"]["ia"].append(champion)
+        else:
+            champion = cblol.sugeriPicks(*args)
+            state["picks"]["ia"].append(champion)
+
+    
 
