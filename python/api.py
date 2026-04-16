@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Body, Query
+from draft import Fase, proxima_fase
 import uvicorn 
 import cblol
 import uuid
@@ -67,13 +68,14 @@ def iniciar_draft(data: dict = Body(...)):
 def acao_draft(data: dict = Body(...)):
     state = sessions[data["sessionId"]]
     is_ban = state["fase_atual"].startswith("BAN")
+    picks = state["picks"]["player"] + state["picks"]["ia"]
+
     if(state["jogador_atual"] == "PLAYER"):
         if(is_ban):
             state["bans"]["player"].append(data["champion"])
         else:
             state["picks"]["player"].append(data["champion"])
     else:
-        picks = state["picks"]["player"] + state["picks"]["ia"]
         args = (
             state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["time_user"], state["bans"]["player"], state["picks"]["player"], picks
             )
@@ -84,5 +86,20 @@ def acao_draft(data: dict = Body(...)):
             champion = cblol.sugeriPicks(*args)
             state["picks"]["ia"].append(champion)
 
-    
+    fase_atual = Fase(state["fase_atual"])
+    proxima, jogador = proxima_fase(fase_atual, state["is_first_pick"])
+
+    state["fase_atual"] = proxima.value
+    state["jogador_atual"] = jogador
+
+    return{
+        "sessionId": data["sessionId"],
+        "faseAtual": state["fase_atual"],
+        "jogadorAtual": state["jogador_atual"],
+        "bansPlayer": state["bans"]["player"],
+        "bansIA": state["bans"]["ia"],
+        "picksPlayer": state["picks"]["player"],
+        "picksIA": state["picks"]["ia"],
+        "fearless": picks
+    }    
 

@@ -57,12 +57,12 @@ def proxima_fase(fase_atual: Fase, is_first_pick: bool) -> tuple[Fase, str]:
     fases = [f for f, _ in ORDEM_DRAFT]
     index = fases.index(fase_atual)
     
-    proxima, age_first_pick = ORDEM_DRAFT[index + 1]
+    proxima, quem_age = ORDEM_DRAFT[index + 1]
     
     if proxima == Fase.FIM:
         return Fase.FIM, "FIM"
     
-    if age_first_pick == is_first_pick:
+    if quem_age == is_first_pick:
         jogador_atual = "PLAYER"
     else:
         jogador_atual = "IA"
