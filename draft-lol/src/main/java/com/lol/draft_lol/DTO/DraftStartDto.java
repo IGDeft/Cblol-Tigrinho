@@ -8,22 +8,22 @@ import jakarta.validation.constraints.NotBlank;
 public record DraftStartDto (
 
   @Schema(example = "LOUD", description= "Qual time você irá representar?")
-  @NotBlank(message = "O formato não pode estar vazio")
-  @JsonProperty("formato")
+  @NotBlank(message = "O time não pode estar vazio")
+  @JsonProperty("timeUsuario")
   String timeUsuario,
 
   @Schema(example = "LOUD", description= "Qual time a IA irá representar?")
-  @NotBlank(message = "O formato não pode estar vazio")
-  @JsonProperty("formato")
+  @NotBlank(message = "O time não pode estar vazio")
+  @JsonProperty("timeIA")
   String timeIA,
 
-  @Schema(example = "MD3", description= "Quantidade de jogos na serie")
-  @NotBlank(message = "O formato não pode estar vazio")
-  @JsonProperty("formato")
-  String formato,
+  @Schema(example = "3", description= "Quantidade de jogos na serie(apenas número)")
+  @NotBlank(message = "A quantidade não pode estar vazio")
+  @JsonProperty("quantidadeJogos")
+  Integer quantidadeJogos,
 
   @Schema(example = "true", description= "Você vai ser First Pick? sim(true) ou não (false) ")
   @JsonProperty("isFirstPick")
-  boolean isFirstPick
+  Boolean isFirstPick
   
 ){}

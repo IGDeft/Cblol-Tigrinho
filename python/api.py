@@ -52,7 +52,7 @@ def iniciar_draft(data: dict = Body(...)):
         jogador_atual = "IA"
 
     sessions[session_id] = {
-        "total_jogos": data["formato"],
+        "total_jogos": data["quantidadeJogos"],
         "is_first_pick": data["is_first_pick"],
         "time_user": data["time_user"],
         "time_ia": data["time_ia"],
