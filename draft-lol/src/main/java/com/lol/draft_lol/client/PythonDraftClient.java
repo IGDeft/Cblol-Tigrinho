@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import com.lol.draft_lol.DTO.DraftRequestDto;
+import com.lol.draft_lol.DTO.DraftStartDto;
 
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 
@@ -22,5 +23,8 @@ public interface PythonDraftClient {
 
   @PostMapping("/predict")
   Object preverDraft(@RequestBody DraftRequestDto dados);
+
+  @PostMapping("/draft/iniciar")
+  Object iniciarDraft(@RequestBody DraftStartDto dados);
 
 }

@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.lol.draft_lol.DTO.DraftRequestDto;
+import com.lol.draft_lol.DTO.DraftStartDto;
 import com.lol.draft_lol.client.PythonDraftClient;
 
 @Service
@@ -15,5 +16,9 @@ public class DraftService {
   public Object gerarDraft(DraftRequestDto dados){
     System.out.println("Enviando: " + dados);
     return pythonClient.preverDraft(dados);
+  }
+
+  public Object criarDraft(DraftStartDto dados){
+    return pythonClient.iniciarDraft(dados);
   }
 }
