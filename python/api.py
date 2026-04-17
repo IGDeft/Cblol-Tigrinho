@@ -52,7 +52,7 @@ def iniciar_draft(data: dict = Body(...)):
         jogador_atual = "IA"
 
     sessions[session_id] = {
-        "formato": data["formato"],
+        "total_jogos": data["formato"],
         "is_first_pick": data["is_first_pick"],
         "time_user": data["time_user"],
         "time_ia": data["time_ia"],
@@ -91,7 +91,10 @@ def acao_draft(data: dict = Body(...)):
 
     state["fase_atual"] = proxima.value
     state["jogador_atual"] = jogador
-
+    tem_mais_jogos = True
+    if(state["game_atual"] == state["total_jogos"]):
+        if(proxima == Fase.FIM):
+            tem_mais_jogos: bool = False
     return{
         "sessionId": data["sessionId"],
         "faseAtual": state["fase_atual"],
@@ -100,6 +103,7 @@ def acao_draft(data: dict = Body(...)):
         "bansIA": state["bans"]["ia"],
         "picksPlayer": state["picks"]["player"],
         "picksIA": state["picks"]["ia"],
-        "fearless": picks
+        "fearless": picks,
+        "temMaisJogos": tem_mais_jogos
     }    
 
