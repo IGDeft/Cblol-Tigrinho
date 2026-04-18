@@ -31,7 +31,7 @@ def listar_times(ligas: list[str] = Query(None)):
 
 @app.get("/campeoes")
 def listar_campeoes():
-    return 0;
+    return cblol.obter_campeoes();
 # POST
 @app.post("/predict")
 def predict(data: dict = Body(...)):
