@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.lol.draft_lol.DTO.DraftAcaoDto;
 import com.lol.draft_lol.DTO.DraftRequestDto;
 import com.lol.draft_lol.DTO.DraftStartDto;
 import com.lol.draft_lol.client.PythonDraftClient;
@@ -53,5 +54,11 @@ public class DraftController {
   public Object draftInicio(@RequestBody @Valid DraftStartDto request){
     Object draftIniciado = draftService.criarDraft(request);
     return ResponseEntity.ok(draftIniciado);
+  }
+
+  @PostMapping("/draft/agir")
+  public Object draftInicio(@RequestBody @Valid DraftAcaoDto request){
+    Object draftAlterado = draftService.alterarDraft(request);
+    return ResponseEntity.ok(draftAlterado);
   }
 }

@@ -4,6 +4,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 
+import com.lol.draft_lol.DTO.DraftAcaoDto;
 import com.lol.draft_lol.DTO.DraftRequestDto;
 import com.lol.draft_lol.DTO.DraftStartDto;
 
@@ -26,5 +27,8 @@ public interface PythonDraftClient {
 
   @PostMapping("/draft/iniciar")
   Object iniciarDraft(@RequestBody DraftStartDto dados);
+
+  @PostMapping("/draft/acao")
+  Object alterarDraft(@RequestBody DraftAcaoDto dados);
 
 }

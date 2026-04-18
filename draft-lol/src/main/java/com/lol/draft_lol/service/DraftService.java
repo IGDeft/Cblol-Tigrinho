@@ -3,6 +3,7 @@ package com.lol.draft_lol.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.lol.draft_lol.DTO.DraftAcaoDto;
 import com.lol.draft_lol.DTO.DraftRequestDto;
 import com.lol.draft_lol.DTO.DraftStartDto;
 import com.lol.draft_lol.client.PythonDraftClient;
@@ -20,5 +21,9 @@ public class DraftService {
 
   public Object criarDraft(DraftStartDto dados){
     return pythonClient.iniciarDraft(dados);
+  }
+
+  public Object alterarDraft(DraftAcaoDto dados){
+    return pythonClient.alterarDraft(dados);
   }
 }

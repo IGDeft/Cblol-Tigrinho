@@ -46,16 +46,16 @@ def predict(data: dict = Body(...)):
 def iniciar_draft(data: dict = Body(...)):
     session_id = str(uuid.uuid4())
 
-    if(data["is_first_pick"]):
+    if(data["isFirstPick"]):
         jogador_atual = "PLAYER"
     else:
         jogador_atual = "IA"
 
     sessions[session_id] = {
         "total_jogos": data["quantidadeJogos"],
-        "is_first_pick": data["is_first_pick"],
-        "time_user": data["time_user"],
-        "time_ia": data["time_ia"],
+        "is_first_pick": data["isFirstPick"],
+        "time_user": data["timeUsuario"],
+        "time_ia": data["timeIA"],
         "game_atual": 1,
         "fase_atual": "BAN_1",
         "jogador_atual": jogador_atual,

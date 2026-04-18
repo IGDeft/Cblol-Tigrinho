@@ -12,7 +12,7 @@ public record DraftStartDto (
   @JsonProperty("timeUsuario")
   String timeUsuario,
 
-  @Schema(example = "LOUD", description= "Qual time a IA irá representar?")
+  @Schema(example = "FURIA", description= "Qual time a IA irá representar?")
   @NotBlank(message = "O time não pode estar vazio")
   @JsonProperty("timeIA")
   String timeIA,
