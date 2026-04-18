@@ -29,6 +29,9 @@ def listar_times(ligas: list[str] = Query(None)):
         ligas = ["LTA S"]
     return cblol.obter_times_liga(ligas)
 
+@app.get("/campeoes")
+def listar_campeoes():
+    return 0;
 # POST
 @app.post("/predict")
 def predict(data: dict = Body(...)):
