@@ -27,6 +27,12 @@ public class DraftService {
   }
 
   public Object criarDraft(DraftStartDto dados){
+    if(!timeService.existe(dados.timeIA())){
+      throw new IllegalArgumentException("Time não encontrado: " + dados.timeIA());
+    }
+    if(!timeService.existe(dados.timeUsuario())){
+      throw new IllegalArgumentException("Time não encontrado: " + dados.timeUsuario());
+    }
     return pythonClient.iniciarDraft(dados);
   }
 
