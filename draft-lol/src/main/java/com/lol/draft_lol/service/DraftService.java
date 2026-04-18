@@ -15,6 +15,7 @@ public class DraftService {
   private PythonDraftClient pythonClient;
 
   private TimeService timeService;
+  private ChampionService championService;
 
   public Object gerarDraft(DraftRequestDto dados){
     if (!timeService.existe(dados.timeA())) {
@@ -37,6 +38,9 @@ public class DraftService {
   }
 
   public Object alterarDraft(DraftAcaoDto dados){
+    if(!championService.existe(dados.champion())){
+      throw new IllegalArgumentException("Campeão não encontrado: " + dados.champion());
+    }
     return pythonClient.alterarDraft(dados);
   }
 }

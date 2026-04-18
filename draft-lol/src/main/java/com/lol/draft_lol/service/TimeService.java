@@ -28,7 +28,7 @@ public class TimeService {
   }
 
   public boolean existe(String time){
-    return times.contains(normalizar(time));
+    return this.times.contains(normalizar(time));
   }
 
   public String normalizar(String time){

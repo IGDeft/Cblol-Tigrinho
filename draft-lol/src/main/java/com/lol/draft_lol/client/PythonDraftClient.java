@@ -24,6 +24,9 @@ public interface PythonDraftClient {
   @GetMapping("/times")
   List<String> listarTimes();
 
+  @GetMapping("/campeoes")
+  List<String> listarCampeoes();
+  
   @PostMapping("/predict")
   Object preverDraft(@RequestBody DraftRequestDto dados);
 
