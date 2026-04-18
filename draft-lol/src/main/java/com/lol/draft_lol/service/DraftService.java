@@ -14,8 +14,15 @@ public class DraftService {
   @Autowired
   private PythonDraftClient pythonClient;
 
+  private TimeService timeService;
+
   public Object gerarDraft(DraftRequestDto dados){
-    System.out.println("Enviando: " + dados);
+    if (!timeService.existe(dados.timeA())) {
+            throw new IllegalArgumentException("Time não encontrado: " + dados.timeA());
+        }
+        if (!timeService.existe(dados.timeB())) {
+            throw new IllegalArgumentException("Time não encontrado: " + dados.timeB());
+        }
     return pythonClient.preverDraft(dados);
   }
 

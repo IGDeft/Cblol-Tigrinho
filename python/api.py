@@ -27,13 +27,11 @@ def listar_ligas():
 def listar_times(ligas: list[str] = Query(None)):
     if not ligas:
         ligas = ["LTA S"]
-    response = cblol.obter_times_liga(ligas)
-    return {"times": response}
+    return cblol.obter_times_liga(ligas)
 
 # POST
 @app.post("/predict")
 def predict(data: dict = Body(...)):
-    print(f"Dados recebidos do Java: {data}")
     time_a = data.get("timeA")
     time_b = data.get("timeB")
     jogos = data.get("quantidadeJogos")
@@ -71,6 +69,8 @@ def acao_draft(data: dict = Body(...)):
     picks = state["picks"]["player"] + state["picks"]["ia"]
 
     if(state["jogador_atual"] == "PLAYER"):
+        #confirmar se o champion existe
+        #normalizar champion
         if(is_ban):
             state["bans"]["player"].append(data["champion"])
         else:
@@ -86,6 +86,7 @@ def acao_draft(data: dict = Body(...)):
             champion = cblol.sugeriPicks(*args)
             state["picks"]["ia"].append(champion)
 
+    picks = state["picks"]["player"] + state["picks"]["ia"]
     fase_atual = Fase(state["fase_atual"])
     proxima, jogador = proxima_fase(fase_atual, state["is_first_pick"])
 

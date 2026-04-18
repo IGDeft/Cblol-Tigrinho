@@ -46,8 +46,13 @@ public class DraftController {
 
   @PostMapping("/prever")
   public ResponseEntity<Object> prever(@RequestBody @Valid DraftRequestDto request){
-    Object resultado = draftService.gerarDraft(request);
-    return ResponseEntity.ok(resultado);
+    try{
+      Object resultado = draftService.gerarDraft(request);
+      return ResponseEntity.ok(resultado);
+    } catch(IllegalArgumentException e){
+      return ResponseEntity.badRequest().body(e.getMessage());
+    }
+    
   }
 
   @PostMapping("/draft/start")

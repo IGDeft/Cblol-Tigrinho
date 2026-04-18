@@ -1,5 +1,7 @@
 package com.lol.draft_lol.client;
 
+import java.util.List;
+
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,7 +22,7 @@ public interface PythonDraftClient {
   Object listarLigas();
 
   @GetMapping("/times")
-  Object listarTimes();
+  List<String> listarTimes();
 
   @PostMapping("/predict")
   Object preverDraft(@RequestBody DraftRequestDto dados);
