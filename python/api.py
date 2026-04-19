@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Body, Query
+from fastapi import FastAPI, Body, Query, HTTPException
 from draft import Fase, proxima_fase
 import uvicorn 
 import cblol
@@ -68,6 +68,8 @@ def iniciar_draft(data: dict = Body(...)):
 
 @app.post("/draft/acao")
 def acao_draft(data: dict = Body(...)):
+    if data["sessionId"] not in sessions:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
     state = sessions[data["sessionId"]]
     is_ban = state["fase_atual"].startswith("BAN")
     picks = state["picks"]["player"] + state["picks"]["ia"]
