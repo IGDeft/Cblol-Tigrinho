@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import com.lol.draft_lol.DTO.DraftAcaoDto;
 import com.lol.draft_lol.DTO.DraftProxJogoDto;
@@ -30,7 +31,7 @@ public interface PythonDraftClient {
   List<String> listarCampeoes();
 
   @GetMapping("/draft/sugestao")
-  Object pedirSugestao(@RequestBody DraftSugestaoDto dados);
+  Object pedirSugestao(@RequestParam("sessionId") String sessionId);
   
   @PostMapping("/predict")
   Object preverDraft(@RequestBody DraftRequestDto dados);

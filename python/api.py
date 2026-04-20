@@ -63,6 +63,7 @@ def iniciar_draft(data: dict = Body(...)):
         "jogador_atual": jogador_atual,
         "bans": {"player": [], "ia": []},
         "picks": {"player": [], "ia": []},
+        "fearless": []
     }
     return {"sessionId": session_id, "faseAtual": Fase.BAN_1.value, "jogadorAtual": jogador_atual}
 
@@ -71,6 +72,8 @@ def acao_draft(data: dict = Body(...)):
     if data["sessionId"] not in sessions:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
     state = sessions[data["sessionId"]]
+    #adicionar a logica se champ ja foi pickado
+    #adicionar a logica se champ ja foi banido
     is_ban = state["fase_atual"].startswith("BAN")
 
     if state["jogador_atual"] == "PLAYER":
@@ -85,7 +88,7 @@ def acao_draft(data: dict = Body(...)):
             champion = data["champion"]
         else:
             args = (
-                state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["time_user"], state["bans"]["player"], state["picks"]["player"], state["fearless"]
+                state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["time_user"], state["bans"]["player"], state["picks"]["player"], state["fearless"], not state["is_first_pick"]
                 )
             if is_ban:
                 champion = cblol.sugeriBans(*args)
@@ -127,13 +130,16 @@ def novo_jogo(data: dict = Body(...)):
     if state["game_atual"]>= state["total_jogos"]:
         raise HTTPException(status_code=400, detail="Draft já finalizado")
     
+    if not state["fase_atual"] == Fase.FIM.value:
+        raise HTTPException(status_code=400, detail="Jogo não finalizado")
+    
     if data["isFirstPick"]:
         jogador_atual = "PLAYER"
     else:
         jogador_atual = "IA"
 
     state["game_atual"] += 1
-    state["is_first_pick"] = data["is_first_pick"]
+    state["is_first_pick"] = data["isFirstPick"]
     state["fase_atual"] = Fase.BAN_1.value
     state["jogador_atual"] = jogador_atual
     state["bans"] = {"player": [], "ia": []}
@@ -146,12 +152,12 @@ def novo_jogo(data: dict = Body(...)):
     }
 
 @app.get("/draft/sugestao")
-def pedir_sugestao(data: dict = Body(...)):
-    if data["sessionId"] not in sessions:
+def pedir_sugestao(sessionId: str = Query(...)):
+    if sessionId not in sessions:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    state = sessions[data["sessionId"]]
-    args = ( state["time_user"], state["bans"]["player"], state["picks"]["player"], state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["fearless"] )
-    if state["fase_atual"].startswith["BAN"] :
+    state = sessions[sessionId]
+    args = ( state["time_user"], state["bans"]["player"], state["picks"]["player"], state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["fearless"], not state["is_first_pick"] )
+    if state["fase_atual"].startswith("BAN") :
         champion = cblol.sugeriBans(*args)
     else:
         champion = cblol.sugeriPicks(*args)

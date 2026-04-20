@@ -11,6 +11,7 @@ import com.lol.draft_lol.DTO.DraftAcaoDto;
 import com.lol.draft_lol.DTO.DraftProxJogoDto;
 import com.lol.draft_lol.DTO.DraftRequestDto;
 import com.lol.draft_lol.DTO.DraftStartDto;
+import com.lol.draft_lol.DTO.DraftSugestaoDto;
 import com.lol.draft_lol.client.PythonDraftClient;
 import com.lol.draft_lol.service.DraftService;
 
@@ -46,11 +47,10 @@ public class DraftController {
     return pythonClient.listarTimes();
   }
 
-  // @GetMapping("/draft/sugestao")
-  //   public Object sugerir(){
-  //     return pythonClient.pedirSugestao(dados)
-  //   }
-
+  @GetMapping("/draft/sugestao")
+  public Object sugerir(@Valid DraftSugestaoDto request) {
+      return pythonClient.pedirSugestao(request.sessionId());
+  }
   @PostMapping("/prever")
   public ResponseEntity<Object> prever(@RequestBody @Valid DraftRequestDto request){
     try{

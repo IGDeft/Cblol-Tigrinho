@@ -58,13 +58,17 @@ public class DraftService {
   }
 
   public Object alterarDraft(DraftAcaoDto dados){
-    if(!championService.existe(dados.champion())){
-      throw new IllegalArgumentException("Campeão não encontrado: " + dados.champion());
+    DraftAcaoDto dadosParaEnviar = dados;
+    if(dados.champion() != null){
+      if(!championService.existe(dados.champion())){
+        throw new IllegalArgumentException("Campeão não encontrado: " + dados.champion());
+      }
+      String campeao = championService.normalizar(dados.champion());
+      dadosParaEnviar = new DraftAcaoDto(dados.sessionId(), campeao);
     }
-    String campeao = championService.normalizar(dados.champion());
-    DraftAcaoDto dadosNormalizados = new DraftAcaoDto(dados.sessionId(), campeao);
+
     try {
-        return pythonClient.alterarDraft(dadosNormalizados);
+        return pythonClient.alterarDraft(dadosParaEnviar);
     } catch (FeignException.NotFound e) {
       throw new IllegalArgumentException("Sessão não encontrada");
     }
