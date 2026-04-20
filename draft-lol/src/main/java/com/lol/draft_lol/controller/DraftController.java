@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.lol.draft_lol.DTO.DraftAcaoDto;
+import com.lol.draft_lol.DTO.DraftProxJogoDto;
 import com.lol.draft_lol.DTO.DraftRequestDto;
 import com.lol.draft_lol.DTO.DraftStartDto;
 import com.lol.draft_lol.client.PythonDraftClient;
@@ -39,10 +40,16 @@ public class DraftController {
   public Object ligas(){
     return pythonClient.listarLigas();
   }
+
   @GetMapping("/times")
   public Object times(){
     return pythonClient.listarTimes();
   }
+
+  // @GetMapping("/draft/sugestao")
+  //   public Object sugerir(){
+  //     return pythonClient.pedirSugestao(dados)
+  //   }
 
   @PostMapping("/prever")
   public ResponseEntity<Object> prever(@RequestBody @Valid DraftRequestDto request){
@@ -62,8 +69,14 @@ public class DraftController {
   }
 
   @PostMapping("/draft/agir")
-  public Object draftInicio(@RequestBody @Valid DraftAcaoDto request){
+  public Object alterarDraft(@RequestBody @Valid DraftAcaoDto request){
     Object draftAlterado = draftService.alterarDraft(request);
     return ResponseEntity.ok(draftAlterado);
+  }
+
+  @PostMapping("/draft/prox-jogo")
+  public Object proxJogo(@RequestBody @Valid DraftProxJogoDto request){
+    Object draftProxJogo = draftService.proxJogo(request);
+    return ResponseEntity.ok(draftProxJogo);
   }
 }

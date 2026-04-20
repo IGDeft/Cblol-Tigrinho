@@ -7,8 +7,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import com.lol.draft_lol.DTO.DraftAcaoDto;
+import com.lol.draft_lol.DTO.DraftProxJogoDto;
 import com.lol.draft_lol.DTO.DraftRequestDto;
 import com.lol.draft_lol.DTO.DraftStartDto;
+import com.lol.draft_lol.DTO.DraftSugestaoDto;
 
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 
@@ -26,6 +28,9 @@ public interface PythonDraftClient {
 
   @GetMapping("/campeoes")
   List<String> listarCampeoes();
+
+  @GetMapping("/draft/sugestao")
+  Object pedirSugestao(@RequestBody DraftSugestaoDto dados);
   
   @PostMapping("/predict")
   Object preverDraft(@RequestBody DraftRequestDto dados);
@@ -35,5 +40,8 @@ public interface PythonDraftClient {
 
   @PostMapping("/draft/acao")
   Object alterarDraft(@RequestBody DraftAcaoDto dados);
+
+  @PostMapping("/draft/novo-jogo")
+  Object proxJogo(@RequestBody DraftProxJogoDto dados);
 
 }

@@ -48,7 +48,7 @@ def predict(data: dict = Body(...)):
 def iniciar_draft(data: dict = Body(...)):
     session_id = str(uuid.uuid4())
 
-    if(data["isFirstPick"]):
+    if data["isFirstPick"]:
         jogador_atual = "PLAYER"
     else:
         jogador_atual = "IA"
@@ -59,12 +59,12 @@ def iniciar_draft(data: dict = Body(...)):
         "time_user": data["timeUsuario"],
         "time_ia": data["timeIA"],
         "game_atual": 1,
-        "fase_atual": "BAN_1",
+        "fase_atual": Fase.BAN_1.value,
         "jogador_atual": jogador_atual,
         "bans": {"player": [], "ia": []},
         "picks": {"player": [], "ia": []},
     }
-    return {"sessionId": session_id, "faseAtual": "BAN_1", "jogadorAtual": jogador_atual}
+    return {"sessionId": session_id, "faseAtual": Fase.BAN_1.value, "jogadorAtual": jogador_atual}
 
 @app.post("/draft/acao")
 def acao_draft(data: dict = Body(...)):
@@ -72,36 +72,40 @@ def acao_draft(data: dict = Body(...)):
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
     state = sessions[data["sessionId"]]
     is_ban = state["fase_atual"].startswith("BAN")
-    picks = state["picks"]["player"] + state["picks"]["ia"]
 
-    if(state["jogador_atual"] == "PLAYER"):
-        #confirmar se o champion existe
-        #normalizar champion
-        if(is_ban):
-            state["bans"]["player"].append(data["champion"])
+    if state["jogador_atual"] == "PLAYER":
+        champion = data["champion"]
+        if is_ban:
+            state["bans"]["player"].append(champion)
         else:
-            state["picks"]["player"].append(data["champion"])
+            state["picks"]["player"].append(champion)
+            state["fearless"].append(champion)
     else:
-        args = (
-            state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["time_user"], state["bans"]["player"], state["picks"]["player"], picks
-            )
-        if(is_ban):
-            champion = cblol.sugeriBans(*args)
+        if data.get("champion"):
+            champion = data["champion"]
+        else:
+            args = (
+                state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["time_user"], state["bans"]["player"], state["picks"]["player"], state["fearless"]
+                )
+            if is_ban:
+                champion = cblol.sugeriBans(*args)
+            else:
+                champion = cblol.sugeriPicks(*args)
+        if is_ban:
             state["bans"]["ia"].append(champion)
         else:
-            champion = cblol.sugeriPicks(*args)
             state["picks"]["ia"].append(champion)
+            state["fearless"].append(champion)
 
-    picks = state["picks"]["player"] + state["picks"]["ia"]
     fase_atual = Fase(state["fase_atual"])
     proxima, jogador = proxima_fase(fase_atual, state["is_first_pick"])
 
     state["fase_atual"] = proxima.value
     state["jogador_atual"] = jogador
     tem_mais_jogos = True
-    if(state["game_atual"] == state["total_jogos"]):
-        if(proxima == Fase.FIM):
-            tem_mais_jogos: bool = False
+    if state["game_atual"] == state["total_jogos"]:
+        if proxima == Fase.FIM:
+            tem_mais_jogos = False
     return{
         "sessionId": data["sessionId"],
         "faseAtual": state["fase_atual"],
@@ -110,7 +114,47 @@ def acao_draft(data: dict = Body(...)):
         "bansIA": state["bans"]["ia"],
         "picksPlayer": state["picks"]["player"],
         "picksIA": state["picks"]["ia"],
-        "fearless": picks,
+        "fearless": state["fearless"],
         "temMaisJogos": tem_mais_jogos
     }    
 
+@app.post("/draft/novo-jogo")
+def novo_jogo(data: dict = Body(...)):
+    if data["sessionId"] not in sessions:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    state = sessions[data["sessionId"]]
+
+    if state["game_atual"]>= state["total_jogos"]:
+        raise HTTPException(status_code=400, detail="Draft já finalizado")
+    
+    if data["isFirstPick"]:
+        jogador_atual = "PLAYER"
+    else:
+        jogador_atual = "IA"
+
+    state["game_atual"] += 1
+    state["is_first_pick"] = data["is_first_pick"]
+    state["fase_atual"] = Fase.BAN_1.value
+    state["jogador_atual"] = jogador_atual
+    state["bans"] = {"player": [], "ia": []}
+    state["picks"] = {"player": [], "ia": []}
+
+    return{
+        "faseAtual": state["fase_atual"],
+        "gameAtual": state["game_atual"],
+        "jogadorAtual": state["jogador_atual"]
+    }
+
+@app.get("/draft/sugestao")
+def pedir_sugestao(data: dict = Body(...)):
+    if data["sessionId"] not in sessions:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    state = sessions[data["sessionId"]]
+    args = ( state["time_user"], state["bans"]["player"], state["picks"]["player"], state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["fearless"] )
+    if state["fase_atual"].startswith["BAN"] :
+        champion = cblol.sugeriBans(*args)
+    else:
+        champion = cblol.sugeriPicks(*args)
+    return{
+        "champion": champion
+    }

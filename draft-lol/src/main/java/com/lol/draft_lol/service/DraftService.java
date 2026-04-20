@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.lol.draft_lol.DTO.DraftAcaoDto;
+import com.lol.draft_lol.DTO.DraftProxJogoDto;
 import com.lol.draft_lol.DTO.DraftRequestDto;
 import com.lol.draft_lol.DTO.DraftStartDto;
 import com.lol.draft_lol.client.PythonDraftClient;
@@ -67,6 +68,13 @@ public class DraftService {
     } catch (FeignException.NotFound e) {
       throw new IllegalArgumentException("Sessão não encontrada");
     }
-    
+  }
+
+  public Object proxJogo(DraftProxJogoDto dados){
+    try {
+        return pythonClient.proxJogo(dados);
+    } catch (FeignException.NotFound e) {
+      throw new IllegalArgumentException("Sessão não encontrada");
+    }
   }
 }
