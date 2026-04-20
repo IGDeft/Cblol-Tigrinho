@@ -72,17 +72,15 @@ def acao_draft(data: dict = Body(...)):
     if data["sessionId"] not in sessions:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
     state = sessions[data["sessionId"]]
-    
-    for i in state["fearless"]:
-        if champion == i:
+    if data.get("champion"):
+        champion = data["champion"]
+        if champion in state["fearless"]:
             raise HTTPException(status_code=400, detail="champion ja escolhido")
-        
-    for i in state["bans"]["player"]:
-        if champion == i:
+            
+        if champion in state["bans"]["player"]:
             raise HTTPException(status_code=400, detail="champion banido")    
-        
-    for i in state["bans"]["ia"]:
-        if champion == i:
+            
+        if champion in state["bans"]["ia"]:
             raise HTTPException(status_code=400, detail="champion banido")  
 
     is_ban = state["fase_atual"].startswith("BAN")
