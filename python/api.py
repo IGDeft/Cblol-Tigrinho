@@ -72,8 +72,19 @@ def acao_draft(data: dict = Body(...)):
     if data["sessionId"] not in sessions:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
     state = sessions[data["sessionId"]]
-    #adicionar a logica se champ ja foi pickado
-    #adicionar a logica se champ ja foi banido
+    
+    for i in state["fearless"]:
+        if champion == i:
+            raise HTTPException(status_code=400, detail="champion ja escolhido")
+        
+    for i in state["bans"]["player"]:
+        if champion == i:
+            raise HTTPException(status_code=400, detail="champion banido")    
+        
+    for i in state["bans"]["ia"]:
+        if champion == i:
+            raise HTTPException(status_code=400, detail="champion banido")  
+
     is_ban = state["fase_atual"].startswith("BAN")
 
     if state["jogador_atual"] == "PLAYER":
