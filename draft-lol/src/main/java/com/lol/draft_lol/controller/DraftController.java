@@ -27,31 +27,31 @@ public class DraftController {
   @Autowired
   private DraftService draftService;
 
-  @GetMapping("/testar") 
+  @GetMapping("/Testar") 
   public String status(){
     return "Funcionou";
   }
 
-  @GetMapping("/python")
+  @GetMapping("/Python")
   public Object testar(){
     return pythonClient.obterStatusHome();
   }
 
-  @GetMapping("/ligas")
+  @GetMapping("/Ligas")
   public Object ligas(){
     return pythonClient.listarLigas();
   }
 
-  @GetMapping("/times")
+  @GetMapping("/Times")
   public Object times(){
     return pythonClient.listarTimes();
   }
 
-  @GetMapping("/draft/sugestao")
+  @GetMapping("/draft/Sugestao")
   public Object sugerir(@Valid DraftSugestaoDto request) {
       return pythonClient.pedirSugestao(request.sessionId());
   }
-  @PostMapping("/prever")
+  @PostMapping("/Prever")
   public ResponseEntity<Object> prever(@RequestBody @Valid DraftRequestDto request){
     try{
       Object resultado = draftService.gerarDraft(request);
@@ -62,19 +62,19 @@ public class DraftController {
     
   }
 
-  @PostMapping("/draft/start")
+  @PostMapping("/draft/Start")
   public Object draftInicio(@RequestBody @Valid DraftStartDto request){
     Object draftIniciado = draftService.criarDraft(request);
     return ResponseEntity.ok(draftIniciado);
   }
 
-  @PostMapping("/draft/agir")
+  @PostMapping("/draft/Picks-Bans")
   public Object alterarDraft(@RequestBody @Valid DraftAcaoDto request){
     Object draftAlterado = draftService.alterarDraft(request);
     return ResponseEntity.ok(draftAlterado);
   }
 
-  @PostMapping("/draft/prox-jogo")
+  @PostMapping("/draft/Prox-jogo")
   public Object proxJogo(@RequestBody @Valid DraftProxJogoDto request){
     Object draftProxJogo = draftService.proxJogo(request);
     return ResponseEntity.ok(draftProxJogo);

@@ -36,7 +36,7 @@ public class DraftService {
       dados.quantidadeJogos()
     );
 
-    return pythonClient.preverDraft(dadosNormalizados);
+    return pythonClient.preverDraft(dados);
   }
 
   public Object criarDraft(DraftStartDto dados){
@@ -54,7 +54,7 @@ public class DraftService {
       dados.quantidadeJogos(),
       dados.isFirstPick()
     );
-    return pythonClient.iniciarDraft(dadosNormalizados);
+    return pythonClient.iniciarDraft(dados);
   }
 
   public Object alterarDraft(DraftAcaoDto dados){
@@ -68,7 +68,7 @@ public class DraftService {
     }
 
     try {
-        return pythonClient.alterarDraft(dadosParaEnviar);
+        return pythonClient.alterarDraft(dados);
     } catch (FeignException.NotFound e) {
       throw new IllegalArgumentException("Sessão não encontrada");
     }

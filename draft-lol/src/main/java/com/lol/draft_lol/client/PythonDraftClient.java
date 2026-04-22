@@ -11,7 +11,6 @@ import com.lol.draft_lol.DTO.DraftAcaoDto;
 import com.lol.draft_lol.DTO.DraftProxJogoDto;
 import com.lol.draft_lol.DTO.DraftRequestDto;
 import com.lol.draft_lol.DTO.DraftStartDto;
-import com.lol.draft_lol.DTO.DraftSugestaoDto;
 
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 

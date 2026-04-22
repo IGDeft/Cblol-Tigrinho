@@ -165,11 +165,11 @@ def pedir_sugestao(sessionId: str = Query(...)):
     if sessionId not in sessions:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
     state = sessions[sessionId]
-    args = ( state["time_user"], state["bans"]["player"], state["picks"]["player"], state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["fearless"], not state["is_first_pick"] )
+    args = ( state["time_user"], state["bans"]["player"], state["picks"]["player"], state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["fearless"], not state["is_first_pick"])
     if state["fase_atual"].startswith("BAN") :
         champion = cblol.sugeriBans(*args)
     else:
-        champion = cblol.sugeriPicks(*args)
+        champion = cblol.sugeriPicks(*args, True)
     return{
         "champion": champion
     }
