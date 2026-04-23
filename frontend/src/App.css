@@ -1,0 +1,150 @@
+/* 1. Reset Total para ocupar a tela inteira */
+* {
+  box-sizing: border-box;
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  background-color: #000; /* Fundo de segurança */
+  overflow: hidden; /* Evita scrolls estranhos na tela toda */
+}
+
+/* 2. Container Principal (Flexbox) */
+.main-container {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+}
+
+/* 3. Lado Azul (Esquerda) */
+.blue-team {
+  flex: 1; 
+  background-color: #0a1428; /* Azul escuro estilo League */
+  border-right: 2px solid #005a82;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  color: #0097e6;
+}
+
+/* 4. Centro (Champions) */
+.champions-selection {
+  flex: 3; 
+  background-color: #010a13;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  overflow-y: auto; /* Scroll apenas aqui no meio */
+  border-bottom: 1px solid #1e2328;
+}
+
+/* 5. Lado Vermelho (Direita) */
+.red-team {
+  flex: 1;
+  background-color: #1a0a0a; /* Vermelho escuro estilo League */
+  border-left: 2px solid #c8aa6e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  color: #e8405a;
+}
+
+/* 6. Estilo da Grade de Champions */
+.champions-selection {
+  gap: 15px;
+  width: 100%;
+  padding: 20px;
+  color: white;
+}
+
+.champions-grid {
+  display: flex;      /* Coloca os itens lado a lado */
+  flex-wrap: wrap;    /* Se não couber na linha, pula para a de baixo */
+  gap: 10px;          /* Espaço entre os nomes */
+  justify-content: center;
+  padding: 20px;
+}
+
+.champion-card {
+  background-color: #1e2328; /* Fundo cinza escuro */
+  border: 1px solid #c8aa6e;  /* Bordas douradas (estilo LoL) */
+  color: #cdbe91;
+  padding: 15px;
+  border-radius: 4px;
+  min-width: 100px;
+  text-align: center;
+}
+.champion-card.selected {
+  border: 2px solid #00ff00; /* Borda verde para o que você acabou de clicar */
+  box-shadow: 0 0 10px #00ff00;
+}
+
+.champion-card.disabled {
+  filter: grayscale(100%);
+  opacity: 0.3;
+  pointer-events: none; /* Impede clicar de novo */
+}
+
+.btn-confirmar {
+  margin-top: 20px;
+  padding: 15px 30px;
+  background-color: #c8aa6e;
+  color: #010a13;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-confirmar:disabled {
+  background-color: #333;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.times-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.time-card {
+  padding: 10px;
+  background-color: #111;
+  border: 1px solid #444;
+  cursor: pointer;
+  color: #ccc;
+  transition: 0.2s;
+}
+
+.time-card.selected-blue {
+  border-color: #007bff;
+  background-color: #002b5c;
+  color: white;
+}
+
+.time-card.selected-red {
+  border-color: #ff4b4b;
+  background-color: #5c0000;
+  color: white;
+}
+
+.btn-confirmar-time {
+  width: 100%;
+  padding: 10px;
+  background-color: #c8aa6e;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-confirmar-time:disabled {
+  background-color: #333;
+  cursor: not-allowed;
+}
