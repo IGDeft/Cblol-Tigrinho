@@ -1,17 +1,37 @@
-const BASE_URL = 'http://localhost:8080'
+const BASE_URL = 'http://localhost:8080/draft'
 
 let sessionIdGlobal = null;
 export const draftService = {
     iniciarDraft: async (dados) => {
-        const resposta = await fetch (`${BASE_URL}/draft/Start`,{
+        const resposta = await fetch (`${BASE_URL}/Start`,{
              method: 'POST',
             headers: { 'Content-Type': 'application/json'},
             body: JSON.stringify(dados)
         })
-        const dadosResposta = await resposta.json();
+        const dadosResposta = await resposta.json()
         sessionIdGlobal = dadosResposta.sessionId
         return dadosResposta;
     },
 
-    getSessionId: () => sessionIdGlobal
+    getSessionId: () => sessionIdGlobal,
+
+    pickBanChampion: async (dados) => {
+        const resposta = await fetch (`${BASE_URL}/Picks-Bans`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        })
+        return await resposta.json()            
+        
+    },
+
+    getChampions: async(dados) => {
+        const response = await fetch (`${BASE_URL}/champions`)
+        return await response.json()
+    },
+
+    getTimes: async(dados) => {
+        const response = await fetch (`${BASE_URL}/times`)
+        return await response.json()
+    }
 }

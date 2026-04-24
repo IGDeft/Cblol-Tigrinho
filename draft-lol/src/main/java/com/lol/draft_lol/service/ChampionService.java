@@ -18,16 +18,22 @@ public class ChampionService {
   @Autowired
   private PythonDraftClient pythonClient;
 
-  private Set<String> campeoes = new HashSet<>();
+  private List<String> campeoes;
+  // private Set<String> campeoes = new HashSet<>();
+
+  public List<String> getCampeoes() {
+    return this.campeoes;
+  }
 
   @PostConstruct
   public void carregarCampeoes(){
-    List<String> lista = pythonClient.listarCampeoes();
-    this.campeoes = lista.stream().map(this::normalizar).collect(Collectors.toSet());
+    this.campeoes = pythonClient.listarCampeoes();
+    // List<String> lista = pythonClient.listarCampeoes();
+    // this.campeoes = lista.stream().map(this::normalizar).collect(Collectors.toSet());
   }
 
   public boolean existe(String campeao){
-    return this.campeoes.contains(normalizar(campeao));
+    return this.campeoes.contains(campeao);
   }
 
   public String normalizar(String campeao){

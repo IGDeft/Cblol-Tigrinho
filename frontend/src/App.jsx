@@ -1,17 +1,9 @@
-import { use, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import './App.css'
 import { draftService } from './service/DraftService'
-
-const champions = [
-  { name: 'Aatrox' },
-  { name: 'Ahri' },
-  { name: 'Akali' },
-  { name: 'Amumu' },
-  { name: 'Anivia' }
-];
 
 const times = [
   { name: 'LOUD' },
@@ -22,8 +14,36 @@ const times = [
 
 function App() {
 
+  const [champions, setChampions] = useState([])
+
+  useEffect(() => {
+    const carregarCampeoes = async () => {
+      try {
+        const listNomes = await draftService.getChampions()
+        setChampions(listNomes.map(nome=> ({name: nome})))
+      } catch (e) {
+        console.error("erro ao buscar campeoes: ", e)
+      }
+    }
+    carregarCampeoes()
+  }, [])
+
+  const [times, setTimes] = useState([])
+
+  useEffect(() => {
+    const carregarTimes = async () => {
+      try {
+        const listNomes = await draftService.getTimes()
+        setTimes(listNomes.map(nome=> ({name: nome})))
+      } catch (e) {
+        console.error("erro ao buscar campeoes: ", e)
+      }
+    }
+    carregarTimes()
+  }, [])
   const[selecaoTemporaria, setSelecaoTemporaria] = useState(null)
   const[champsBloqueados, setChampsBloqueados] = useState([])
+
   const tratarCliqueNoChamp = (champion) => {
     setSelecaoTemporaria(champion)
   }
@@ -33,9 +53,36 @@ function App() {
     setSelecaoTemporaria(null)
   }
   
+  const pickBanChamp = async () => {
+    const pickBan = {
+      sessionId: draftService.getSessionId(),
+      champion: selecaoTemporaria.name
+    }
+    try{
+      const resultado = await draftService.pickBanChampion(pickBan)
+      console.log("enviando...", resultado)
+      setDadosDraftJava(resultado)
+      setSelecaoTemporaria(null)
+    } catch(error){
+      console.error("falha no backend", error)
+    }
+
+  }
+  const pickBanChampIA = async () => {
+    const pickBan = {
+      sessionId: draftService.getSessionId()
+    }
+    try{
+      const resultado = await draftService.pickBanChampion(pickBan)
+      console.log("enviando...", resultado)
+      setDadosDraftJava(resultado)
+    } catch(error){
+      console.error("falha no backend", error)
+    }
+
+  }
 
   const iniciarDraft = async () =>{
-    console.log("Valor atual do estado ladoFirstPick:", ladoFirstPick);
      const dadosDraft = {
       timeUsuario: timeConfirmadoBlue.name,
       timeIA: timeConfirmadoRed.name,
@@ -75,6 +122,8 @@ function App() {
   const [timeTempRed, setTimeTempRed] = useState(null);
   const [timeConfirmadoRed, setTimeConfirmadoRed] = useState(null);
  
+  const [dadosDraftJava, setDadosDraftJava] = useState(null);
+
   const confirmarTimeBlue = () => {
     if (timeTempBlue != null) {
       setTimeConfirmadoBlue(timeTempBlue);
@@ -140,10 +189,16 @@ function App() {
           </label>
         </header>
         <div className='bans'>
-          <p>champs banidos</p>
+          <h3>Seus Bans</h3>
+          {dadosDraftJava?.bansPlayer?.map((nomeChamp, index) =>(
+            <div key={index} className='ban-item'> {nomeChamp}</div>
+          ))}
         </div>
         <div className='picks'>
-          <p>picks</p>
+          <h3>Seus Picks</h3>
+          {dadosDraftJava?.picksPlayer?.map((nomeChamp, index) =>(
+            <div key={index} className='pick-item'> {nomeChamp}</div>
+          ))}
         </div>
         
       </aside>
@@ -183,9 +238,15 @@ function App() {
           <div className='confirm-area'>
             <button
             className='btn-confirmar'
-            onClick={confirmarSelecao}
+            onClick={confirmarSelecao, pickBanChamp}
             disabled={botaoDesabilitado}>
               {textoBotao}
+            </button>
+          </div>
+          <div className='confirm-area'>
+            <button className='btn-jogar-ia'
+            onClick={pickBanChampIA}>
+              IA joga
             </button>
           </div>
         </header>
@@ -281,10 +342,16 @@ function App() {
           </label>
         </header>
          <div className='bans'>
-          <p>champs banidos</p>
+          <h3>Bans IA</h3>
+          {dadosDraftJava?.bansIA?.map((nomeChamp, index) =>(
+            <div key={index} className='ban-item'> {nomeChamp}</div>
+          ))}
         </div>
-        <div className='picks'>
-          <p>picks</p>
+       <div className='picks'>
+          <h3>Picks IA</h3>
+          {dadosDraftJava?.picksIA?.map((nomeChamp, index) =>(
+            <div key={index} className='pick-item'> {nomeChamp}</div>
+          ))}
         </div>
         
       </aside>

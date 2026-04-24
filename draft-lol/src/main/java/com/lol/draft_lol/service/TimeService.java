@@ -18,17 +18,23 @@ public class TimeService {
   @Autowired
   private PythonDraftClient pythonClient;
 
-  private Set<String> times = new HashSet<>();
+   private List<String> times;
+ // private Set<String> times = new HashSet<>();
+
+  public List<String> getTimes() {
+    return times;
+  }
 
   @PostConstruct
   public void carregarTimes(){
-    List<String> lista = pythonClient.listarTimes();
-    this.times = lista.stream().map(this::normalizar).collect(Collectors.toSet());
+    this.times = pythonClient.listarTimes();
+    //List<String> lista = pythonClient.listarTimes();
+   // this.times = lista.stream().map(this::normalizar).collect(Collectors.toSet());
     
   }
 
   public boolean existe(String time){
-    return this.times.contains(normalizar(time));
+    return this.times.contains(time);
   }
 
   public String normalizar(String time){

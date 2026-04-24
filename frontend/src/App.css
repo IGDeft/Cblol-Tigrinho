@@ -1,150 +1,526 @@
-/* 1. Reset Total para ocupar a tela inteira */
-* {
-  box-sizing: border-box;
-}
+/* ========================================
+   LOL DRAFT TOOL - App.css
+   Tema: League of Legends Draft Phase
+   ======================================== */
 
-body, html {
+/* --- RESET & BASE --- */
+*, *::before, *::after {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  height: 100vh;
-  width: 100vw;
-  background-color: #000; /* Fundo de segurança */
-  overflow: hidden; /* Evita scrolls estranhos na tela toda */
 }
 
-/* 2. Container Principal (Flexbox) */
+body {
+  background-color: #0a0e1a;
+  color: #c8aa6e;
+  font-family: 'Segoe UI', 'Arial', sans-serif;
+  min-height: 100vh;
+}
+
+/* --- LAYOUT PRINCIPAL --- */
 .main-container {
-  display: flex;
-  width: 100%;
-  height: 100vh;
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  min-height: 100vh;
+  gap: 0;
+  background-color: #0a0e1a;
 }
 
-/* 3. Lado Azul (Esquerda) */
+/* ========================================
+   ASIDE - TIMES (BLUE E RED)
+   ======================================== */
+
+aside {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 12px;
+  border-top: 3px solid;
+  position: relative;
+}
+
+aside::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(200, 170, 110, 0.3) 2px,
+    rgba(200, 170, 110, 0.3) 3px
+  );
+}
+
 .blue-team {
-  flex: 1; 
-  background-color: #0a1428; /* Azul escuro estilo League */
-  border-right: 2px solid #005a82;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-  color: #0097e6;
+  background: linear-gradient(180deg, #0d1b3e 0%, #0a1428 100%);
+  border-color: #1e4a9e;
+  border-right: 1px solid #1a2a50;
 }
 
-/* 4. Centro (Champions) */
-.champions-selection {
-  flex: 3; 
-  background-color: #010a13;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-  overflow-y: auto; /* Scroll apenas aqui no meio */
-  border-bottom: 1px solid #1e2328;
-}
-
-/* 5. Lado Vermelho (Direita) */
 .red-team {
-  flex: 1;
-  background-color: #1a0a0a; /* Vermelho escuro estilo League */
-  border-left: 2px solid #c8aa6e;
+  background: linear-gradient(180deg, #3e0d0d 0%, #280a0a 100%);
+  border-color: #9e1e1e;
+  border-left: 1px solid #501a1a;
+}
+
+/* Títulos dos times */
+.blue-team h2 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #4fc3f7;
+  text-align: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #1e4a9e;
+  text-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+}
+
+.red-team h2 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #ef5350;
+  text-align: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #9e1e1e;
+  text-shadow: 0 0 10px rgba(239, 83, 80, 0.5);
+}
+
+/* --- SELEÇÃO DE TIMES --- */
+.selecao-time-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 20px;
-  color: #e8405a;
-}
-
-/* 6. Estilo da Grade de Champions */
-.champions-selection {
-  gap: 15px;
-  width: 100%;
-  padding: 20px;
-  color: white;
-}
-
-.champions-grid {
-  display: flex;      /* Coloca os itens lado a lado */
-  flex-wrap: wrap;    /* Se não couber na linha, pula para a de baixo */
-  gap: 10px;          /* Espaço entre os nomes */
-  justify-content: center;
-  padding: 20px;
-}
-
-.champion-card {
-  background-color: #1e2328; /* Fundo cinza escuro */
-  border: 1px solid #c8aa6e;  /* Bordas douradas (estilo LoL) */
-  color: #cdbe91;
-  padding: 15px;
-  border-radius: 4px;
-  min-width: 100px;
-  text-align: center;
-}
-.champion-card.selected {
-  border: 2px solid #00ff00; /* Borda verde para o que você acabou de clicar */
-  box-shadow: 0 0 10px #00ff00;
-}
-
-.champion-card.disabled {
-  filter: grayscale(100%);
-  opacity: 0.3;
-  pointer-events: none; /* Impede clicar de novo */
-}
-
-.btn-confirmar {
-  margin-top: 20px;
-  padding: 15px 30px;
-  background-color: #c8aa6e;
-  color: #010a13;
-  font-weight: bold;
-  border: none;
-  cursor: pointer;
-}
-
-.btn-confirmar:disabled {
-  background-color: #333;
-  color: #666;
-  cursor: not-allowed;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .times-lista {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  margin-bottom: 10px;
+  gap: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #c8aa6e #1a1a2e;
 }
 
 .time-card {
-  padding: 10px;
-  background-color: #111;
-  border: 1px solid #444;
+  padding: 8px 12px;
+  border: 1px solid #2a2a4e;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #a0a0b0;
   cursor: pointer;
-  color: #ccc;
-  transition: 0.2s;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+}
+
+.time-card:hover {
+  border-color: #c8aa6e;
+  color: #c8aa6e;
+  background: rgba(200, 170, 110, 0.08);
 }
 
 .time-card.selected-blue {
-  border-color: #007bff;
-  background-color: #002b5c;
-  color: white;
+  border-color: #4fc3f7;
+  color: #4fc3f7;
+  background: rgba(79, 195, 247, 0.12);
 }
 
 .time-card.selected-red {
-  border-color: #ff4b4b;
-  background-color: #5c0000;
-  color: white;
+  border-color: #ef5350;
+  color: #ef5350;
+  background: rgba(239, 83, 80, 0.12);
+}
+
+/* --- PICKS E BANS --- */
+.bans h3,
+.picks h3 {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #c8aa6e;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(200, 170, 110, 0.3);
+}
+
+.ban-item {
+  padding: 5px 10px;
+  margin-bottom: 3px;
+  background: rgba(255, 50, 50, 0.1);
+  border: 1px solid rgba(255, 50, 50, 0.3);
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #ef9a9a;
+}
+
+.pick-item {
+  padding: 6px 10px;
+  margin-bottom: 3px;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.blue-team .pick-item {
+  background: rgba(30, 74, 158, 0.3);
+  border: 1px solid rgba(79, 195, 247, 0.3);
+  color: #90caf9;
+}
+
+.red-team .pick-item {
+  background: rgba(158, 30, 30, 0.3);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+  color: #ef9a9a;
+}
+
+/* ========================================
+   MAIN - SELEÇÃO DE CAMPEÕES
+   ======================================== */
+
+.champions-selection {
+  background-color: #0d1117;
+  border-left: 1px solid #1a2a50;
+  border-right: 1px solid #501a1a;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.champions-selection h2 {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #c8aa6e;
+  text-align: center;
+  padding: 10px;
+  background: rgba(200, 170, 110, 0.06);
+  border-bottom: 1px solid rgba(200, 170, 110, 0.2);
+}
+
+.champions-selection p {
+  font-size: 11px;
+  color: #555570;
+  text-align: center;
+  padding: 6px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid #1a1a2e;
+}
+
+/* --- HEADERS DE FILTRO E BUSCA --- */
+.filter-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid #1a1a2e;
+  flex-wrap: wrap;
+}
+
+.search-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border-bottom: 1px solid #1a1a2e;
+  flex-wrap: wrap;
+}
+
+/* --- INPUTS --- */
+input[type="text"] {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #2a2a4e;
+  border-radius: 3px;
+  color: #c8aa6e;
+  padding: 5px 10px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+
+input[type="text"]::placeholder {
+  color: #44445a;
+}
+
+input[type="text"]:focus {
+  border-color: #c8aa6e;
+  background: rgba(200, 170, 110, 0.06);
+}
+
+/* --- CHECKBOXES --- */
+input[type="checkbox"] {
+  accent-color: #c8aa6e;
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+}
+
+.filter-header label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.15s;
+  white-space: nowrap;
+}
+
+.filter-header label:hover {
+  color: #c8aa6e;
+}
+
+/* --- BOTÕES --- */
+.btn-confirmar {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #b8972a 0%, #c8aa6e 50%, #b8972a 100%);
+  border: none;
+  border-radius: 3px;
+  color: #0a0e1a;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-confirmar:hover:not(:disabled) {
+  background: linear-gradient(135deg, #c8aa6e 0%, #dfc080 50%, #c8aa6e 100%);
+  transform: translateY(-1px);
+}
+
+.btn-confirmar:disabled {
+  background: #2a2a3e;
+  color: #44445a;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-jogar-ia {
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid #7b1fa2;
+  border-radius: 3px;
+  color: #ce93d8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-jogar-ia:hover {
+  background: rgba(123, 31, 162, 0.2);
+  border-color: #ce93d8;
+}
+
+.bn-iniciar-draft {
+  padding: 7px 18px;
+  background: linear-gradient(135deg, #1a6e3c 0%, #2e9e5e 100%);
+  border: 1px solid #2e9e5e;
+  border-radius: 3px;
+  color: #b9f6ca;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.bn-iniciar-draft:hover {
+  background: linear-gradient(135deg, #2e9e5e 0%, #43c478 100%);
+  transform: translateY(-1px);
 }
 
 .btn-confirmar-time {
-  width: 100%;
-  padding: 10px;
-  background-color: #c8aa6e;
-  border: none;
+  padding: 7px 12px;
+  background: transparent;
+  border: 1px solid #c8aa6e;
+  border-radius: 3px;
+  color: #c8aa6e;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   cursor: pointer;
-  font-weight: bold;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.btn-confirmar-time:hover:not(:disabled) {
+  background: rgba(200, 170, 110, 0.12);
 }
 
 .btn-confirmar-time:disabled {
-  background-color: #333;
+  border-color: #2a2a4e;
+  color: #44445a;
   cursor: not-allowed;
+}
+
+/* --- CONFIRM AREA --- */
+.confirm-area {
+  display: flex;
+  align-items: center;
+}
+
+/* ========================================
+   GRID DE CAMPEÕES
+   ======================================== */
+
+.champions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 4px;
+  padding: 10px;
+  overflow-y: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a4e #0d1117;
+  max-height: calc(100vh - 280px);
+}
+
+.champion-card {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #1e2040;
+  border-radius: 2px;
+  color: #7a8090;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  line-height: 1.2;
+  word-break: break-word;
+  overflow: hidden;
+  position: relative;
+}
+
+.champion-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 40%, rgba(200, 170, 110, 0.03));
+  pointer-events: none;
+}
+
+.champion-card:hover {
+  border-color: #c8aa6e;
+  color: #c8aa6e;
+  background: rgba(200, 170, 110, 0.1);
+  transform: scale(1.04);
+  z-index: 1;
+}
+
+.champion-card.selected {
+  border-color: #4fc3f7;
+  color: #fff;
+  background: rgba(79, 195, 247, 0.18);
+  box-shadow: 0 0 0 1px #4fc3f7 inset;
+  transform: scale(1.04);
+  z-index: 1;
+}
+
+.champion-card.disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  filter: grayscale(1);
+  transform: none;
+  background: rgba(0, 0, 0, 0.3);
+  border-color: #111122;
+  color: #333344;
+}
+
+.champion-card.disabled:hover {
+  transform: none;
+  border-color: #111122;
+  color: #333344;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ========================================
+   SCROLLBARS GLOBAIS
+   ======================================== */
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0e1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a4e;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c8aa6e;
+}
+
+/* ========================================
+   RESPONSIVIDADE
+   ======================================== */
+
+@media (max-width: 900px) {
+  .main-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .blue-team,
+  .red-team {
+    border-top: 3px solid;
+    border-left: none;
+    border-right: none;
+  }
+
+  .champions-grid {
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    max-height: 50vh;
+  }
 }

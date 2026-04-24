@@ -1,5 +1,8 @@
 package com.lol.draft_lol.controller;
 
+import java.util.List;
+import java.util.Set;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -14,7 +17,9 @@ import com.lol.draft_lol.DTO.DraftRequestDto;
 import com.lol.draft_lol.DTO.DraftStartDto;
 import com.lol.draft_lol.DTO.DraftSugestaoDto;
 import com.lol.draft_lol.client.PythonDraftClient;
+import com.lol.draft_lol.service.ChampionService;
 import com.lol.draft_lol.service.DraftService;
+import com.lol.draft_lol.service.TimeService;
 
 import jakarta.validation.Valid;
 
@@ -27,6 +32,12 @@ public class DraftController {
   
   @Autowired
   private DraftService draftService;
+
+   @Autowired
+  private ChampionService championService;
+
+  @Autowired
+  private TimeService timeService;
 
   @GetMapping("/Testar") 
   public String status(){
@@ -46,6 +57,15 @@ public class DraftController {
   @GetMapping("/Times")
   public Object times(){
     return pythonClient.listarTimes();
+  }
+
+  @GetMapping("/draft/champions")
+  public List<String> listarTodosChamps(){
+    return championService.getCampeoes();
+  }
+   @GetMapping("/draft/times")
+  public List<String> listarTodosTimes(){
+    return timeService.getTimes();
   }
 
   @GetMapping("/draft/Sugestao")
