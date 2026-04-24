@@ -24,10 +24,14 @@ def listar_ligas():
 
 
 @app.get("/times")
-def listar_times(ligas: list[str] = Query(None)):
+def listar_times(
+    ligas: list[str] = Query(None),
+    year: int = Query(None),
+):
     if not ligas:
         ligas = ["LTA S"]
-    return cblol.obter_times_liga(ligas)
+        
+    return cblol.obter_times_liga(ligas, year)
 
 @app.get("/campeoes")
 def listar_campeoes():

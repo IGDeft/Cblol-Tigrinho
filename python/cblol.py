@@ -4,16 +4,37 @@
 # %%
 import pandas as pd
 
-tabela = pd.read_csv("2025_LoL_esports_match_data_from_OraclesElixir.csv")
+tabela_2025 = pd.read_csv("2025_LoL_esports_match_data_from_OraclesElixir.csv")
+tabela_2026 = pd.read_csv("2026_LoL_esports_match_data_from_OraclesElixir.csv")
+
+tabela_2025["year"] = 2025
+tabela_2026["year"] = 2026
+
+tabela = pd.concat([tabela_2025, tabela_2026], ignore_index = True)
+
 #display(tabela)
 
 # %%
+novos_nomes = {
+    "LTA S": "CBLOL",
+    "LTA N": "LCS"
+}
+
+tabela["league_unificada"] = tabela["league"].replace(novos_nomes)
+
+print("Times 2025")
 print(tabela['league'].unique())
+
 print()
 print(tabela.columns.tolist())
+print()
+
+print("Times 2026\n")
+print(tabela_2026["league"].unique())
+
 
 # %%
-def obter_times_liga(lista_liga = None):
+def obter_times_liga(lista_liga = None, year = None):
 
   if lista_liga is None:
     return tabela['teamname'].unique()
@@ -30,36 +51,39 @@ def obter_times_liga(lista_liga = None):
 
   return sorted(list(set(todos_times)))
 
+
 def obter_campeoes():
     campeoes = tabela['champion'].dropna().unique().tolist()
     return sorted(campeoes)
 
-# %%
-def obter_tabela_liga(lista_liga = None):
-  if lista_liga is None:
-    return tabela
-  
-  if isinstance(lista_liga, str):
-    lista_liga = [lista_liga]
-  
-  tabela_filtrada = tabela[tabela['league'].isin(lista_liga)]
 
-  return tabela_filtrada
+def obter_tabela_liga(lista_liga = None, year = None):
+    
+    df_ligas = tabela.copy()
 
-# %%
+    if year is not None:
+        df_ligas = df_ligas[df_ligas["year"] == year]
+
+    if lista_liga is not None:
+        
+        if isinstance(lista_liga, str):
+            lista_liga = [lista_liga]
+        df_ligas = df_ligas[df_ligas["league"].isin(lista_liga)]
+        
+    return df_ligas
+
+
 def listar_todas_ligas():
+
   return sorted(tabela['league'].unique().tolist())
 
 # %%
-#tabela_lta_sul = tabela[tabela['league'] == "LTA S"].copy()
-# display(tabela_lta_sul)
-
 tabela_relev = [
 
     # Identificação Jogo
 
     'gameid', "split", "game", "patch", "date", "playoffs", "position",
-    "result", "league",
+    "result", "league", "year", "league_unificada",
     # Jogador/Time
     "playername", "teamname", "participantid", "playerid", "kills", "deaths",
     "assists", "teamkills", "teamdeaths", "earnedgoldshare", "damageshare",
@@ -79,7 +103,11 @@ tabela_relev = [
     "csdiffat15", "xpdiffat15", "golddiffat15",
     "team kpm", "ckpm", "cspm",
 ]
-ligas_relev = ["LTA S", "LCK", "LPL", "LEC", "LTA N", "PCS", "VCS", "LJL", "LCP", "MSI", "EWC"]
+
+ligas_relev_2025 = ["LTA S", "LCK", "LPL", "LEC", "LTA N", "PCS", "VCS", "LJL", "LCP", "MSI", "EWC"]
+ligas_relev_2026 = ["CBLOL", "LCK", "LPL", "LEC", "LCS", "VCS", "LJL", "LCP", "EWC"]
+ligas_relev = list(set(ligas_relev_2025 + ligas_relev_2026))
+
 
 tabela_filtrada = obter_tabela_liga(ligas_relev)
 tabela_final = tabela_filtrada[tabela_relev].copy()
@@ -89,32 +117,48 @@ tabela_final["gamelength"] = (tabela_final["gamelength"] + pd.to_datetime("1970-
 tabela_final["teamname"] = tabela_final["teamname"].replace("Isurus Estral", "Isurus")
 
 
+tabela_final["patch_num"] = ((tabela_final["patch"] * 100).round().fillna(0).astype(int))
+
 #display(tabela_final)
 
 # %%
+def filtar_dados(liga = None, year = None):
+
+    df_meta_liga = tabela_final.copy()
+
+    if year is not None:
+        df_meta_liga = df_meta_liga[df_meta_liga["year"] == year]
+    
+    if liga is not None:
+        if isinstance(liga, str):
+            liga = [liga]
+        df_meta_liga = df_meta_liga[df_meta_liga["league"].isin(liga)]
+
+    return df_meta_liga
+
 print("Quantida de jogos por liga.")
 jogos_por_liga = tabela_final.groupby("league")["gameid"].nunique()
 
 print(jogos_por_liga.sort_values(ascending = False))
 
+
 # %%
-# Criar Global Picks
+# Meta
 
-# Picks/Bans/Presença liga_ativa
+ano = 2025
+liga_ativa = "CBLOL"
 
-liga_ativa = "LTA S"
-tabela_liga_ativa = tabela_final[tabela_final["league"] == liga_ativa].copy()
+tabela_liga_ativa = filtar_dados(liga = liga_ativa, year = 2026)
 
 tabela_players_ativo = tabela_liga_ativa[tabela_liga_ativa["position"] != "team"]
 tabela_team_ativo = tabela_liga_ativa[tabela_liga_ativa["position"] == "team"]
 
+# Picks
 
 champion_global = tabela_players_ativo["champion"].value_counts()
 print(champion_global.head(40))
 
-# Global Bans
-
-#tabela_team = tabela_final[tabela_final['position'] == "team"]
+# Bans
 
 bans_global = pd.concat([
     tabela_team_ativo["ban1"],
@@ -159,6 +203,7 @@ print(df_meta.head(50).round(2))
 # %%
 def gerar_df_time(nome_time):
     tabela_equipes = tabela_final[tabela_final["teamname"] == nome_time].copy()
+    
     if tabela_equipes.empty:
         print(f"Time {nome_time} não foi encontrado.")
         return None
@@ -218,6 +263,14 @@ for i in range(1, 6):
 #display(df_confronto)
 
 # %%
+import numpy as np
+
+tabela_final["patch_rank"] = tabela_final["patch_num"].rank(method = "dense")
+patch_max = tabela_final["patch_rank"].max()
+
+tabela_final["patch_peso"] = np.exp(- 0.05 * (patch_max - tabela_final["patch_rank"]))
+
+# %%
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 
@@ -225,13 +278,13 @@ from sklearn.preprocessing import LabelEncoder
 
 bloco_treino = []
 pesos = {
-    "LTA S": 5, "LCK": 3, "LPL": 3, "LEC": 2,
-    "LTA N": 2, "PCS": 1, "VCS": 1, "LJL": 1,
+    "CBLOL": 5, "LCK": 3, "LPL": 3, "LEC": 2,
+    "LCS": 2, "PCS": 1, "VCS": 1, "LJL": 1,
     "LCP": 1, "MSI": 4, "EWC": 4,
 }
 
 for liga, peso in pesos.items():
-    dados_da_liga = tabela_final[tabela_final["league"] == liga]
+    dados_da_liga = tabela_final[tabela_final["league_unificada"] == liga]
 
     if dados_da_liga.empty:
         print(f"Os dados da liga {liga} não estão na sua base de dados.")
@@ -266,6 +319,7 @@ def extrair_parceiros(row):
         teammates.append(-1)
 
     return pd.Series(teammates[:4])
+
 
 def mapear_oponentes(df):
     resumo = df.groupby(["gameid", "teamname"])["champion_num"].apply(list).reset_index()
@@ -324,6 +378,16 @@ tabela_ia = pd.merge(tabela_ia, df_meta.reset_index().rename(columns = {"index":
 
 tabela_ia["num_picks"] = tabela_ia.groupby("gameid").cumcount()
 
+if "patch_peso" not in tabela_ia.columns:
+    tabela_ia = pd.merge(
+        tabela_ia,
+        tabela_ml[["gameid", "teamname", "patch_peso"]],
+        on=["gameid", "teamname"],
+        how="left"
+    )
+
+tabela_ia["patch_peso"] = tabela_ia["patch_peso"].fillna(1.0)
+
 # Treino IA
 
 colunas_treino = [
@@ -343,10 +407,9 @@ modelo_ia = RandomForestClassifier(
     random_state = 42
 )
 
-modelo_ia.fit(X, y)
+modelo_ia.fit(X, y, sample_weight = tabela_ia["patch_peso"].values)
 
 print(f"IA treinada com sucesso! Liga ativa {liga_ativa} | Linhas de treino: {len(tabela_ml)}")
-
 
 # %%
 prioridade_historica = tabela_liga_ativa.groupby(["teamname", "champion"]).size().unstack(fill_value = 0)
@@ -588,8 +651,6 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
     peso_ia = min(0.6 + (n_picks_feitos * 0.02), 0.85)
     peso_hist = 1 - peso_ia
 
-    # melhor_pick_geral = None
-    # maior_score_geral = - 999.0
     score_candidatos = []
 
     for rota in rotas_vagas:
@@ -662,14 +723,7 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
                     bonus_counter = min(bonus_counter / len(picksTime2), 0.25)
                     score += bonus_counter * 0.2
 
-            # if score > maior_score_geral:
-            #     maior_score_geral = score
-            #     melhor_pick_geral = camp
-
             score_candidatos.append((camp, score))
-
-    # if melhor_pick_geral:
-    #     return melhor_pick_geral
 
     if score_candidatos:
         score_candidatos.sort(key = lambda x: x[1], reverse = True)
@@ -680,9 +734,7 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
             return top3_picks
         else:
             return choices(top3_picks, weights = pesos, k = 1)[0]
-        # return choices(top3_picks, weights = pesos, k = 1)[0]
-    
-    
+
     camps_disponiveis = [
         c for c in todos_camps_time if c not in proibidos and c in dna_campeoes
     ]
@@ -945,7 +997,7 @@ def ordemPicksBans(timeFP, timeLP, jogos, picks = None):
   jogo_atual = [picksFP, bansFP, picksLP, bansLP]
 
   if jogos > 1:
-    return [jogo_atual] + ordemPicksBans(timeFP, timeLP, jogos-1, picks)
+    return [jogo_atual] + ordemPicksBans(timeLP, timeFP, jogos-1, picks)
   
   return [jogo_atual]
 
@@ -955,7 +1007,7 @@ times_liga_ativa = tabela_liga_ativa["teamname"].unique()
 print(times_liga_ativa)
 
 # %%
-time1 = "FURIA"
+time1 = "Vivo Keyd Stars"
 time2 = "RED Canids"
 
 historico_fearless = []
