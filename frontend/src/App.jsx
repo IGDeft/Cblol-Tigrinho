@@ -3,6 +3,7 @@ import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import './App.css'
+import { draftService } from './service/DraftService'
 
 const champions = [
   { name: 'Aatrox' },
@@ -31,18 +32,23 @@ function App() {
     setChampsBloqueados([...champsBloqueados, selecaoTemporaria.name])
     setSelecaoTemporaria(null)
   }
+  
 
   const iniciarDraft = async () =>{
+    console.log("Valor atual do estado ladoFirstPick:", ladoFirstPick);
      const dadosDraft = {
-      sessionId: "TESTE_1",
-      timeAzul: timeConfirmadoBlue.name,
-      timeRed: timeConfirmadoRed.name,
-      formato: formatoMD,
-      firstPick: ladoFirstPick
+      timeUsuario: timeConfirmadoBlue.name,
+      timeIA: timeConfirmadoRed.name,
+      quantidadeJogos: formatoMD,
+      isFirstPick: ladoFirstPick === 'BLUE'
     }
-    console.log("enviando para o java", dadosDraft)
+    try{
+      const resultado = await draftService.iniciarDraft(dadosDraft)
+      console.log("enviando para o java", resultado)
+    } catch(error){
+      console.error("falha ao iniciar draft no backend", error)
+    }
 
-    //chamar funcçao backend
   }
   
   let textoBotao = "selecione um campeao"
@@ -53,7 +59,7 @@ function App() {
     botaoDesabilitado = false;
   }
 
-  const [formatoMD, setFormatoMD] = useState('MD1')
+  const [formatoMD, setFormatoMD] = useState(1)
 
   const[ladoFirstPick, setLadoFirstPick] = useState('BLUE')
 
@@ -149,16 +155,16 @@ function App() {
           placeholder='Pesquisar Liga...' 
           />
           <label>
-            <input type="checkbox" checked={formatoMD === 'MD1'}
-            onChange={() => setFormatoMD('MD1')} /> MD1
+            <input type="checkbox" checked={formatoMD === 1}
+            onChange={() => setFormatoMD(1)} /> MD1
           </label>
           <label>
-            <input type="checkbox" checked={formatoMD === 'MD3'}
-            onChange={() => setFormatoMD('MD3')} /> MD3
+            <input type="checkbox" checked={formatoMD === 3}
+            onChange={() => setFormatoMD(3)} /> MD3
           </label>
           <label>
-            <input type="checkbox" checked={formatoMD === 'MD5'}
-            onChange={() => setFormatoMD('MD5')} /> MD5
+            <input type="checkbox" checked={formatoMD === 5}
+            onChange={() => setFormatoMD(5)} /> MD5
           </label>
           {(timeConfirmadoBlue !== null && timeConfirmadoRed !== null && timeConfirmadoBlue.name !== timeConfirmadoRed.name) && (
             <button className='bn-iniciar-draft'
