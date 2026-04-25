@@ -29,7 +29,7 @@ def listar_times(
     year: int = Query(None),
 ):
     if not ligas:
-        ligas = ["LTA S"]
+        ligas = ["CBLOL"]
         
     return cblol.obter_times_liga(ligas, year)
 

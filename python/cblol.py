@@ -148,7 +148,7 @@ print(jogos_por_liga.sort_values(ascending = False))
 ano = 2025
 liga_ativa = "CBLOL"
 
-tabela_liga_ativa = filtar_dados(liga = liga_ativa, year = 2026)
+tabela_liga_ativa = filtar_dados(liga = liga_ativa, year = None)
 
 tabela_players_ativo = tabela_liga_ativa[tabela_liga_ativa["position"] != "team"]
 tabela_team_ativo = tabela_liga_ativa[tabela_liga_ativa["position"] == "team"]
@@ -271,29 +271,53 @@ patch_max = tabela_final["patch_rank"].max()
 tabela_final["patch_peso"] = np.exp(- 0.05 * (patch_max - tabela_final["patch_rank"]))
 
 # %%
+
+# bloco_treino = []
+# pesos = {
+#     "CBLOL": 5, "LCK": 3, "LPL": 3, "LEC": 2,
+#     "LCS": 2, "PCS": 1, "VCS": 1, "LJL": 1,
+#     "LCP": 1, "MSI": 4, "EWC": 4,
+# }
+
+# for liga, peso in pesos.items():
+#     dados_da_liga = tabela_final[tabela_final["league_unificada"] == liga]
+
+#     if dados_da_liga.empty:
+#         print(f"Os dados da liga {liga} não estão na sua base de dados.")
+#         continue
+
+#     for _ in range(peso):
+#         bloco_treino.append(dados_da_liga)
+
+# tabela_ml = pd.concat(bloco_treino).reset_index(drop = True)
+
+# %%
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 
 # Pesos
 
-bloco_treino = []
-pesos = {
-    "CBLOL": 5, "LCK": 3, "LPL": 3, "LEC": 2,
-    "LCS": 2, "PCS": 1, "VCS": 1, "LJL": 1,
-    "LCP": 1, "MSI": 4, "EWC": 4,
+pesos_base_liga = {
+    "LCK": 1.4, "LPL": 1.4, "LEC": 1.3, "CBLOL": 1.0, 
+    "LCS": 1.0, "PCS": 0.9, "VCS": 0.9, "LJL": 0.9, 
+    "LCP": 0.9, "MSI": 1.5, "EWC": 1.5,
 }
 
-for liga, peso in pesos.items():
-    dados_da_liga = tabela_final[tabela_final["league_unificada"] == liga]
+bonus_liga_ativa = 2.5
 
-    if dados_da_liga.empty:
-        print(f"Os dados da liga {liga} não estão na sua base de dados.")
-        continue
+def calculo_peso_liga(row):
+    base = pesos_base_liga.get(row["league_unificada"], 1.0)
+    
+    if row["league_unificada"] == liga_ativa:
+        return base * bonus_liga_ativa
+    return base
 
-    for _ in range(peso):
-        bloco_treino.append(dados_da_liga)
+tabela_final["peso_liga"] = tabela_final["league_unificada"].map(pesos_base_liga).fillna(0.5)
+tabela_final.loc[tabela_final["league_unificada"] == liga_ativa, "peso_liga"] *= bonus_liga_ativa
 
-tabela_ml = pd.concat(bloco_treino).reset_index(drop = True)
+tabela_final["peso_final"] = tabela_final["peso_liga"] * tabela_final["patch_peso"]
+
+tabela_ml = tabela_final.copy()
 
 # Codificadores
 
@@ -378,15 +402,8 @@ tabela_ia = pd.merge(tabela_ia, df_meta.reset_index().rename(columns = {"index":
 
 tabela_ia["num_picks"] = tabela_ia.groupby("gameid").cumcount()
 
-if "patch_peso" not in tabela_ia.columns:
-    tabela_ia = pd.merge(
-        tabela_ia,
-        tabela_ml[["gameid", "teamname", "patch_peso"]],
-        on=["gameid", "teamname"],
-        how="left"
-    )
+tabela_ia["peso_final"] = tabela_ia["peso_final"].fillna(1.0)
 
-tabela_ia["patch_peso"] = tabela_ia["patch_peso"].fillna(1.0)
 
 # Treino IA
 
@@ -407,7 +424,7 @@ modelo_ia = RandomForestClassifier(
     random_state = 42
 )
 
-modelo_ia.fit(X, y, sample_weight = tabela_ia["patch_peso"].values)
+modelo_ia.fit(X, y, sample_weight = tabela_ia["peso_final"].values)
 
 print(f"IA treinada com sucesso! Liga ativa {liga_ativa} | Linhas de treino: {len(tabela_ml)}")
 
@@ -1007,7 +1024,7 @@ times_liga_ativa = tabela_liga_ativa["teamname"].unique()
 print(times_liga_ativa)
 
 # %%
-time1 = "Vivo Keyd Stars"
+time1 = "LØS"
 time2 = "RED Canids"
 
 historico_fearless = []
@@ -1056,5 +1073,87 @@ if df_time1 is not None and df_time2 is not None:
     #display(df_time1.head(10))
     print(time2)
     #display(df_time2.head(10))
+
+# %%
+def gerar_df_bans_time(nome_time):
+    # Filtra apenas jogos do time na posição 'team'
+    df_time = tabela_final[(tabela_final["teamname"] == nome_time) & (tabela_final["position"] == "team")].copy()
+    
+    if df_time.empty:
+        return None
+
+    # Contagens de jogos por situação
+    total_jogos = df_time["gameid"].nunique()
+    total_fp = df_time[df_time["firstPick"] == 1]["gameid"].nunique()
+    total_lp = total_jogos - total_fp
+
+    # Bans de Fase 1 (b1, b2, b3) e Fase 2 (b4, b5)
+    fase1_geral = pd.concat([df_time["ban1"], df_time["ban2"], df_time["ban3"]]).value_counts()
+    fase2_geral = pd.concat([df_time["ban4"], df_time["ban5"]]).value_counts()
+
+    # Recorte estratégico: Ban de Fase 1 quando tem First Pick vs Last Pick
+    fase1_fp = pd.concat([
+        df_time[df_time["firstPick"] == 1]["ban1"],
+        df_time[df_time["firstPick"] == 1]["ban2"],
+        df_time[df_time["firstPick"] == 1]["ban3"]
+    ]).value_counts()
+
+    fase1_lp = pd.concat([
+        df_time[df_time["firstPick"] == 0]["ban1"],
+        df_time[df_time["firstPick"] == 0]["ban2"],
+        df_time[df_time["firstPick"] == 0]["ban3"]
+    ]).value_counts()
+
+    df_bans = pd.DataFrame({
+        "Total": pd.concat([df_time["ban1"], df_time["ban2"], df_time["ban3"], df_time["ban4"], df_time["ban5"]]).value_counts(),
+        "Fase_1": fase1_geral,
+        "Fase_2": fase2_geral,
+        "F1_Sendo_FP": fase1_fp,
+        "F1_Sendo_LP": fase1_lp
+    }).fillna(0)
+
+    # Cálculo de Taxas (%)
+    df_bans["%_Presenca"] = (df_bans["Total"] / total_jogos * 100)
+    df_bans["%_Ban_F1_FP"] = (df_bans["F1_Sendo_FP"] / total_fp * 100) if total_fp > 0 else 0
+    df_bans["%_Ban_F1_LP"] = (df_bans["F1_Sendo_LP"] / total_lp * 100) if total_lp > 0 else 0
+
+    return df_bans.sort_values(by="Total", ascending=False).round(2)
+
+
+def gerar_df_picks_time(nome_time):
+    # Pega os dados de jogadores para os picks e de time para o FirstPick
+    df_time_full = tabela_final[tabela_final["teamname"] == nome_time].copy()
+    df_jogadores = df_time_full[df_time_full["position"] != "team"]
+    df_equipe = df_time_full[df_time_full["position"] == "team"]
+
+    if df_equipe.empty:
+        return None
+
+    total_jogos = df_equipe["gameid"].nunique()
+    total_jogos_fp = df_equipe[df_equipe["firstPick"] == 1]["gameid"].nunique()
+
+    # Contagem de Picks Totais
+    picks_totais = df_jogadores["champion"].value_counts()
+
+    # Contagem de o que o time escolhe quando tem o DIREITO do First Pick (P1)
+    # Aqui usamos a coluna 'pick1' da tabela de time quando firstPick == 1
+    escolhas_p1 = df_equipe[df_equipe["firstPick"] == 1]["pick1"].value_counts()
+
+    df_picks = pd.DataFrame({
+        "Total_Picks": picks_totais,
+        "Vezes_em_P1": escolhas_p1
+    }).fillna(0)
+
+    df_picks["%_Pick_Rate"] = (df_picks["Total_Picks"] / total_jogos * 100)
+    # % de vezes que, tendo o FP, eles escolheram esse boneco no P1
+    df_picks["%_Prioridade_P1"] = (df_picks["Vezes_em_P1"] / total_jogos_fp * 100) if total_jogos_fp > 0 else 0
+
+    return df_picks.sort_values(by="Total_Picks", ascending=False).round(2)
+
+# %%
+# print(gerar_df_bans_time("FURIA").head(50))
+
+# %%
+# print(gerar_df_picks_time("FURIA").head(50))
 
 
