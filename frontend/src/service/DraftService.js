@@ -33,5 +33,20 @@ export const draftService = {
     getTimes: async(dados) => {
         const response = await fetch (`${BASE_URL}/times`)
         return await response.json()
+    },
+
+    proxJogo: async(dados) => {
+        const response = await fetch (`${BASE_URL}/Prox-jogo`,{
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        })
+        return await response.json()
+    },
+
+    sugestao: async() => {
+        const id = sessionIdGlobal
+        const response = await fetch (`${BASE_URL}/Sugestao?sessionId=${id}`)
+        return await response.json()
     }
 }

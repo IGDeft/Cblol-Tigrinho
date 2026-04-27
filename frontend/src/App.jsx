@@ -1,4 +1,4 @@
-import { use, useEffect, useState } from 'react'
+import {useEffect, useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
@@ -14,7 +14,30 @@ const times = [
 
 function App() {
 
+  const [sugestaoIA, setSugestaoIA] = useState([]);
+  const [dadosDraftJava, setDadosDraftJava] = useState(null);
+  useEffect(() => {
+    if (dadosDraftJava) {
+      obterSugestao();
+    }
+  }, [dadosDraftJava]);
+
+const obterSugestao = async () => {
+  try {
+    const data = await draftService.sugestao();
+    if (data && Array.isArray(data.champion)) {
+      setSugestaoIA(data.champion);
+    } else if (data && data.champion) {
+      setSugestaoIA([data.champion]);
+    }
+  } catch (error) {
+    console.error("Erro ao buscar sugestão da IA", error);
+  }
+};
+
+
   const [champions, setChampions] = useState([])
+
 
   useEffect(() => {
     const carregarCampeoes = async () => {
@@ -42,7 +65,7 @@ function App() {
     carregarTimes()
   }, [])
   const[selecaoTemporaria, setSelecaoTemporaria] = useState(null)
-  const[champsBloqueados, setChampsBloqueados] = useState([])
+  
 
   const tratarCliqueNoChamp = (champion) => {
     setSelecaoTemporaria(champion)
@@ -51,8 +74,10 @@ function App() {
     if(!selecaoTemporaria) return
     setChampsBloqueados([...champsBloqueados, selecaoTemporaria.name])
     setSelecaoTemporaria(null)
+    setSugestaoIA([])
   }
-  
+
+  const[champsBloqueados, setChampsBloqueados] = useState([])
   const pickBanChamp = async () => {
     const pickBan = {
       sessionId: draftService.getSessionId(),
@@ -63,6 +88,13 @@ function App() {
       console.log("enviando...", resultado)
       setDadosDraftJava(resultado)
       setSelecaoTemporaria(null)
+      const novosProibidos = [
+            ...(resultado.bansIA || []),
+            ...(resultado.bansPlayer || []),
+            ...(resultado.fearless || []),
+        ];
+        
+        setChampsBloqueados(novosProibidos);
     } catch(error){
       console.error("falha no backend", error)
     }
@@ -76,7 +108,29 @@ function App() {
       const resultado = await draftService.pickBanChampion(pickBan)
       console.log("enviando...", resultado)
       setDadosDraftJava(resultado)
+       const novosProibidos = [
+            ...(resultado.bansIA || []),
+            ...(resultado.bansPlayer || []),
+            ...(resultado.fearless || []),
+        ];
+        
+        setChampsBloqueados(novosProibidos);
     } catch(error){
+      console.error("falha no backend", error)
+    }
+
+  }
+
+  const nextJogo = async () =>{
+    const dados = {
+      sessionId: draftService.getSessionId(),
+      isFirstPick: ladoFirstPick === 'BLUE'
+    }
+    try{
+      const resultado = await draftService.proxJogo(dados)
+      const novosProibidos = [dadosDraftJava.fearless];
+      setChampsBloqueados(novosProibidos);
+    }catch(error){
       console.error("falha no backend", error)
     }
 
@@ -92,6 +146,7 @@ function App() {
     try{
       const resultado = await draftService.iniciarDraft(dadosDraft)
       console.log("enviando para o java", resultado)
+      obterSugestao()
     } catch(error){
       console.error("falha ao iniciar draft no backend", error)
     }
@@ -122,7 +177,7 @@ function App() {
   const [timeTempRed, setTimeTempRed] = useState(null);
   const [timeConfirmadoRed, setTimeConfirmadoRed] = useState(null);
  
-  const [dadosDraftJava, setDadosDraftJava] = useState(null);
+  
 
   const confirmarTimeBlue = () => {
     if (timeTempBlue != null) {
@@ -238,7 +293,10 @@ function App() {
           <div className='confirm-area'>
             <button
             className='btn-confirmar'
-            onClick={confirmarSelecao, pickBanChamp}
+            onClick={() => {
+              confirmarSelecao();
+              pickBanChamp();
+            }}
             disabled={botaoDesabilitado}>
               {textoBotao}
             </button>
@@ -247,6 +305,12 @@ function App() {
             <button className='btn-jogar-ia'
             onClick={pickBanChampIA}>
               IA joga
+            </button>
+          </div>
+          <div className= 'prox-jogo'>
+            <button className='btn-prox-jogo'
+            onClick={nextJogo}>
+              PROX JOGO
             </button>
           </div>
         </header>
@@ -262,20 +326,18 @@ function App() {
         <div className='champions-grid'>
           {champions.map((champion) => {
             const foiConfirmado = champsBloqueados.includes(champion.name)
-            let estaSelecionadoAgora = false
-            if(selecaoTemporaria != null){
-              if(selecaoTemporaria.name === champion.name){
-                estaSelecionadoAgora = true
-              }
-            }
+            let estaSelecionadoAgora = selecaoTemporaria?.name === champion.name
+            const isSugestaoIA = sugestaoIA.includes(champion.name)
             let classeFinal = "champion-card"
             if(foiConfirmado){
-              classeFinal = "champion-card disabled"
+              classeFinal += " disabled"
             } else if(estaSelecionadoAgora){
-              classeFinal = "champion-card selected"
+              classeFinal += " selected"
+            } else if(isSugestaoIA){
+              classeFinal += " suggested"
             }
             const clicarNoChamp = () => {
-              if(foiConfirmado === false){
+              if(!foiConfirmado){
                 tratarCliqueNoChamp(champion)
               }
             }
