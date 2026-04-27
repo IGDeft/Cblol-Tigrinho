@@ -54,5 +54,12 @@ export const draftService = {
         const id = sessionIdGlobal
         const response = await fetch (`${BASE_URL}/sessao?sessionId=${id}`)
         return await response.json()
+    },
+    jogadorAtual: async() => {
+        const id = sessionIdGlobal
+        const response = await fetch (`${BASE_URL}/sessao?sessionId=${id}`)
+        const dadosResposta = await response.json()
+        return dadosResposta.jogadorAtual
+        
     }
 }

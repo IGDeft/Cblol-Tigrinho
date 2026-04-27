@@ -1,4 +1,4 @@
-import {useEffect, useState } from 'react'
+import {use, useEffect, useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
@@ -16,6 +16,15 @@ function App() {
 
   const [sugestaoIA, setSugestaoIA] = useState([]);
   const [dadosDraftJava, setDadosDraftJava] = useState(null);
+  const [jogadorAtual, setJogadorAtual] = useState('PLAYER');
+
+  useEffect(() => {
+  if (draftService.getSessionId()) {
+    draftService.jogadorAtual().then(jogador => {
+      if (jogador) setJogadorAtual(jogador)
+    })
+  }
+}, [])
   useEffect(() => {
   if (draftService.getSessionId()) {
     draftService.sessao().then(sessao => {
