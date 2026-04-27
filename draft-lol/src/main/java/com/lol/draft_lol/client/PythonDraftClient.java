@@ -31,6 +31,9 @@ public interface PythonDraftClient {
 
   @GetMapping("/draft/sugestao")
   Object pedirSugestao(@RequestParam("sessionId") String sessionId);
+
+  @GetMapping("/acessar-sessao")
+  Object acessarSessao(@RequestParam("sessionId") String sessionId);
   
   @PostMapping("/predict")
   Object preverDraft(@RequestBody DraftRequestDto dados);

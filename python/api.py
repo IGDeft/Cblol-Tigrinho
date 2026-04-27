@@ -35,7 +35,22 @@ def listar_times(
 
 @app.get("/campeoes")
 def listar_campeoes():
-    return cblol.obter_campeoes();
+    return cblol.obter_campeoes()
+
+@app.get("/acessar-sessao")
+def acessar_jogo(sessionId: str = Query(...)):
+    state = sessions[session_id]
+    return{
+        "sessionId": data["sessionId"],
+        "faseAtual": state["fase_atual"],
+        "jogadorAtual": state["jogador_atual"],
+        "bansPlayer": state["bans"]["player"],
+        "bansIA": state["bans"]["ia"],
+        "picksPlayer": state["picks"]["player"],
+        "picksIA": state["picks"]["ia"],
+        "fearless": state["fearless"],
+        "temMaisJogos": tem_mais_jogos
+    }    
 
 # POST
 @app.post("/predict")
@@ -90,12 +105,15 @@ def acao_draft(data: dict = Body(...)):
     is_ban = state["fase_atual"].startswith("BAN")
 
     if state["jogador_atual"] == "PLAYER":
-        champion = data["champion"]
-        if is_ban:
-            state["bans"]["player"].append(champion)
+        if data.get("champion"):
+            champion = data["champion"]
+            if is_ban:
+                state["bans"]["player"].append(champion)
+            else:
+                state["picks"]["player"].append(champion)
+                state["fearless"].append(champion)
         else:
-            state["picks"]["player"].append(champion)
-            state["fearless"].append(champion)
+            raise HTTPException(status_code=400, detail="usuario nao escolheu nenhum champ")
     else:
         if data.get("champion"):
             champion = data["champion"]

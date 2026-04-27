@@ -72,6 +72,11 @@ public class DraftController {
   public Object sugerir(@Valid DraftSugestaoDto request) {
       return pythonClient.pedirSugestao(request.sessionId());
   }
+  @GetMapping("/draft/sessao")
+  public Object acessarSessao(@Valid DraftSugestaoDto request){
+    return pythonClient.acessarSessao(request.sessionId());
+  }
+
   @PostMapping("/Prever")
   public ResponseEntity<Object> prever(@RequestBody @Valid DraftRequestDto request){
     try{

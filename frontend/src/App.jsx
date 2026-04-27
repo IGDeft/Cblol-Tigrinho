@@ -17,6 +17,12 @@ function App() {
   const [sugestaoIA, setSugestaoIA] = useState([]);
   const [dadosDraftJava, setDadosDraftJava] = useState(null);
   useEffect(() => {
+    if(draftService.getSessionId()){
+      dadosDraftJava = draftService.sessao()
+    }
+    
+  })
+  useEffect(() => {
     if (dadosDraftJava) {
       obterSugestao();
     }
