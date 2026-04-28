@@ -111,6 +111,7 @@ const obterSugestao = async () => {
         ];
         
         setChampsBloqueados(novosProibidos);
+        setJogadorAtual(resultado.jogadorAtual)
     } catch(error){
       console.error("falha no backend", error)
     }
@@ -131,6 +132,7 @@ const obterSugestao = async () => {
         ];
         
         setChampsBloqueados(novosProibidos);
+        setJogadorAtual(resultado.jogadorAtual)
     } catch(error){
       console.error("falha no backend", error)
     }
@@ -146,6 +148,7 @@ const obterSugestao = async () => {
       const resultado = await draftService.proxJogo(dados)
       const novosProibidos = [dadosDraftJava.fearless];
       setChampsBloqueados(novosProibidos);
+      setJogadorAtual(resultado.jogadorAtual)
     }catch(error){
       console.error("falha no backend", error)
     }
@@ -163,6 +166,7 @@ const obterSugestao = async () => {
       const resultado = await draftService.iniciarDraft(dadosDraft)
       console.log("enviando para o java", resultado)
       obterSugestao()
+      setJogadorAtual(resultado.jogadorAtual)
     } catch(error){
       console.error("falha ao iniciar draft no backend", error)
     }
@@ -208,6 +212,12 @@ const obterSugestao = async () => {
       setTimeTempRed(null); 
     }
   };
+  let timeDaVez = "Aguardando escolha: ";
+  if (jogadorAtual === 'PLAYER' && timeConfirmadoBlue) {
+    timeDaVez += timeConfirmadoBlue.name;
+  } else if (jogadorAtual === 'IA' && timeConfirmadoRed) {
+    timeDaVez += timeConfirmadoRed.name;
+  }
   return (
 
     <div className='main-container'>
@@ -298,6 +308,9 @@ const obterSugestao = async () => {
               iniciarDraft
             </button>
           )}
+    
+
+          <h3>{timeDaVez}</h3>
         </header>
         <p>champs banidos pelo fearless</p>
         <h2>Picks e Bans</h2>
@@ -344,13 +357,23 @@ const obterSugestao = async () => {
             const foiConfirmado = champsBloqueados.includes(champion.name)
             let estaSelecionadoAgora = selecaoTemporaria?.name === champion.name
             const isSugestaoIA = sugestaoIA.includes(champion.name)
+            let nivelSugestaoIA = " 0"
+
+            if(sugestaoIA[0] === champion.name){
+              nivelSugestaoIA = "nivel-1"
+            } else if(sugestaoIA[1] === champion.name){
+              nivelSugestaoIA = "nivel-2"
+            } else if(sugestaoIA[2] === champion.name){
+              nivelSugestaoIA = "nivel-3"
+            }
+
             let classeFinal = "champion-card"
             if(foiConfirmado){
               classeFinal += " disabled"
             } else if(estaSelecionadoAgora){
               classeFinal += " selected"
             } else if(isSugestaoIA){
-              classeFinal += " suggested"
+              classeFinal += " suggested " + nivelSugestaoIA
             }
             const clicarNoChamp = () => {
               if(!foiConfirmado){

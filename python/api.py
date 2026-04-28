@@ -89,9 +89,7 @@ def acao_draft(data: dict = Body(...)):
     if data["sessionId"] not in sessions:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
     state = sessions[data["sessionId"]]
-    args = (
-                state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["time_user"], state["bans"]["player"], state["picks"]["player"], state["fearless"], not state["is_first_pick"]
-                )
+    
     if data.get("champion"):
         champion = data["champion"]
         if champion in state["fearless"]:
@@ -114,6 +112,9 @@ def acao_draft(data: dict = Body(...)):
                 state["picks"]["player"].append(champion)
                 state["fearless"].append(champion)
         else:
+            args = (
+                 state["time_user"], state["bans"]["player"], state["picks"]["player"],state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["fearless"], not state["is_first_pick"]
+                )
             if is_ban:
                 champion = cblol.sugeriBans(*args)
                 state["bans"]["player"].append(champion)
@@ -125,6 +126,9 @@ def acao_draft(data: dict = Body(...)):
         if data.get("champion"):
             champion = data["champion"]
         else:
+            args = (
+                state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["time_user"], state["bans"]["player"], state["picks"]["player"], state["fearless"], not state["is_first_pick"]
+                )
             if is_ban:
                 champion = cblol.sugeriBans(*args)
             else:

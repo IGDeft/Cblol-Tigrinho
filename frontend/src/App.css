@@ -501,12 +501,77 @@ input[type="checkbox"] {
 ::-webkit-scrollbar-thumb:hover {
   background: #c8aa6e;
 }
-  .champion-card.suggested {
+/* Estilo base para qualquer sugestão da IA */
+.champion-card.suggested {
   border: 2px solid #00ff88;
   background-color: rgba(0, 255, 136, 0.15);
   box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
   color: #00ff88;
+  z-index: 2;
 }
+
+/* Nível 1: Destaque máximo (Verde Neon) */
+.champion-card.nivel-1 {
+  border-color: #00ff88;
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.7);
+  transform: scale(1.05);
+}
+
+/* Nível 2: Destaque médio (Ciano/Azul) */
+.champion-card.nivel-2 {
+  border-color: #00e5ff;
+  background-color: rgba(0, 229, 255, 0.15);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+  color: #00e5ff;
+}
+
+/* Nível 3: Destaque sutil (Roxo ou Verde escuro) */
+.champion-card.nivel-3 {
+  border-color: #76ff03;
+  background-color: rgba(118, 255, 3, 0.05);
+  box-shadow: 0 0 5px rgba(118, 255, 3, 0.2);
+  color: #c8aa6e;
+}
+
+/* Configuração base para o indicador numérico */
+.champion-card.suggested::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 0 0 0 4px; /* Arredonda apenas o canto interno */
+  font-weight: 900;
+  z-index: 3;
+  text-shadow: none;
+}
+
+/* Estilização por nível */
+
+/* Nível 1 - Verde Esmeralda (Principal) */
+.champion-card.nivel-1::after {
+  content: "1";
+  background-color: #00ff88;
+  color: #000;
+  box-shadow: -1px 1px 5px rgba(0, 255, 136, 0.5);
+}
+
+/* Nível 2 - Azul Ciano (Secundária) */
+.champion-card.nivel-2::after {
+  content: "2";
+  background-color: #00e5ff;
+  color: #000;
+  box-shadow: -1px 1px 5px rgba(0, 229, 255, 0.5);
+}
+
+/* Nível 3 - Roxo/Magenta ou Lima (Terciária) */
+.champion-card.nivel-3::after {
+  content: "3";
+  background-color: #76ff03;
+  color: #000;
+  box-shadow: -1px 1px 5px rgba(118, 255, 3, 0.5);
+}
+
 /* ========================================
    RESPONSIVIDADE
    ======================================== */
