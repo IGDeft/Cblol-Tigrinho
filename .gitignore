@@ -1,0 +1,17 @@
+# Ignorar as saídas do Java (Spring)
+target/
+.mvn/
+mvnw
+mvnw.cmd
+.settings/
+.classpath
+.project
+
+# Ignorar IDEs
+.idea/
+.vscode/
+
+
+python/.venv/
+python/__pycache__/
+python/cblolQ.py
