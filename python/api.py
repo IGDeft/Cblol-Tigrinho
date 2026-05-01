@@ -4,7 +4,19 @@ import uvicorn
 import cblol
 import uuid
 
+# RETIRAR
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+
+# RETIRAR 2
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 sessions = {}
 
@@ -36,6 +48,14 @@ def listar_times(
 @app.get("/campeoes")
 def listar_campeoes():
     return cblol.obter_campeoes()
+
+@app.get("/stats/draft")
+def bans_analise(nome: str = Query(...), ano: int = Query(None)):
+    resultado = cblol.analisar_estrategias(nome, ano)
+
+    if resultado is None:
+        raise HTTPException(status_code = 404, detail = f"Time {nome} não encontrado")
+    return resultado
 
 @app.get("/acessar-sessao")
 def acessar_jogo(sessionId: str = Query(...)):

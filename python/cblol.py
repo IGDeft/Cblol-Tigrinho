@@ -201,44 +201,91 @@ df_meta = df_meta.sort_values(by = "presence", ascending = False)
 print(df_meta.head(50).round(2))
 
 # %%
-def gerar_df_time(nome_time):
-    tabela_equipes = tabela_final[tabela_final["teamname"] == nome_time].copy()
+def analisar_estrategias(nome_time, ano_analise = None):
     
-    if tabela_equipes.empty:
-        print(f"Time {nome_time} não foi encontrado.")
+    df_filtro = tabela_final[(tabela_final["teamname"] == nome_time) & (tabela_final["position"] == "team") & (tabela_final["year"] == ano_analise)]
+
+    if df_filtro.empty:
+        print(f"Time {nome_time} não encontrado para o ano de {ano_analise}")
         return None
     
-    picks = tabela_equipes['champion'].value_counts()
+    ids_todos = df_filtro["gameid"].unique()
+    ids_fp = df_filtro[df_filtro["firstPick"] == 1]["gameid"].unique()
+    ids_lp = df_filtro[df_filtro["firstPick"] == 0]["gameid"].unique()
 
-    tabela_team = tabela_equipes[tabela_equipes["position"] == "team"]
+    df_players_geral = tabela_final[(tabela_final["teamname"] == nome_time) & (tabela_final["year"] == ano_analise) & (tabela_final["position"] != "team")]
+    df_players_fp = df_players_geral[df_players_geral["gameid"].isin(ids_fp)]
+    df_players_lp = df_players_geral[df_players_geral["gameid"].isin(ids_lp)]
 
-    bans = pd.concat([
-        tabela_team["ban1"],
-        tabela_team["ban2"],
-        tabela_team["ban3"],
-        tabela_team["ban4"],
-        tabela_team["ban5"]
-    ]).value_counts()
-
-    total_jogos = tabela_team["gameid"].nunique()
-
-    if total_jogos == 0:
-        print(f"Time {nome_time} não tem jogos validos")
-        return None
-    
-    df_time = pd.DataFrame({
-        "picks" : picks,
-        "bans" : bans
-    }).fillna(0)
-
-    df_time["pick_rate"] = (df_time["picks"] / total_jogos) * 100
-    df_time["ban_rate"] = (df_time["bans"] / total_jogos) * 100
-    df_time["presenca"]= (df_time["pick_rate"] + df_time["ban_rate"])
-
-    df_time = df_time.sort_values(by = "presenca", ascending = False)
-    return df_time.round(2)
+    df_adv_geral = tabela_final[(tabela_final["gameid"].isin(ids_todos) & (tabela_final["teamname"] != nome_time) & (tabela_final["position"] == "team"))]
+    df_adv_fp = tabela_final[(tabela_final["gameid"].isin(ids_fp) & (tabela_final["teamname"] != nome_time) & (tabela_final["position"] == "team"))]
+    df_adv_lp = tabela_final[(tabela_final["gameid"].isin(ids_lp) & (tabela_final["teamname"] != nome_time) & (tabela_final["position"] == "team"))]
 
 
+    def processar_picks(df_contexto):
+
+        total_jogos = df_contexto["gameid"].nunique()
+
+        if total_jogos == 0:
+            return []
+        
+        stats = df_contexto.groupby("champion").agg(picks = ("champion", "count"), vitorias = ("result", "sum"))
+
+        stats["pick_rate"] = (stats["picks"] / total_jogos * 100).round(1)
+        stats["win_rate"] = (stats["vitorias"] / stats["picks"] * 100).round(1)
+        stats.index.name = "champion"
+        stats = stats.sort_values("picks", ascending = False).head(10)
+
+        return stats.reset_index().to_dict(orient = "records")
+
+
+    def processar_bans(df_contexto):
+
+        total_jogos = len(df_contexto)
+
+        if total_jogos == 0:
+            return []
+        
+        bans_f1 = pd.concat([df_contexto["ban1"], df_contexto["ban2"], df_contexto["ban3"]]).value_counts()
+
+        cols_bans = [f"ban{i}" for i in range(1, 6)]
+        bans_totais = pd.concat([df_contexto[col] for col in cols_bans]).value_counts()
+
+        df_resumo = pd.DataFrame({
+            "pct_bans_f1": (bans_f1 / total_jogos * 100).round(1),
+            "bans_f1": bans_f1,
+            "pct_bans_totais": (bans_totais / total_jogos * 100).round(1),
+            "bans_totais": bans_totais
+        }).fillna(0)
+
+        df_resumo[["bans_totais", "bans_f1"]] = df_resumo[["bans_totais", "bans_f1"]].astype(int)
+        df_resumo = df_resumo.sort_values(by = "bans_f1", ascending = False).head(10)
+        df_resumo.index.name = "champion"
+
+        return df_resumo.reset_index().to_dict(orient = "records")
+
+
+    def montar_bloco(df_picks, df_filtro, df_adv, titulo, jogos):
+
+        return {
+            "titulo": titulo,
+            "jogos": int(jogos),  
+            "picks": processar_picks(df_picks), 
+            "seus_bans": processar_bans(df_filtro),
+            "bans_contra": processar_bans(df_adv), 
+        }
+
+
+    return {
+        "time": nome_time,
+        "ano": ano_analise,
+        "geral": montar_bloco(df_players_geral, df_filtro, df_adv_geral, "Geral", len(ids_todos)),
+        "fp": montar_bloco(df_players_fp,df_filtro[df_filtro["firstPick"] == 1], df_adv_fp, "First Pick", len(ids_fp)),
+        "lp": montar_bloco(df_players_lp, df_filtro[df_filtro["firstPick"] == 0], df_adv_lp, "Last Pick", len(ids_lp))
+    }
+
+
+# %%
 def analisar_time_adv(nome_time, ano_analise = None):
     
     df_time = tabela_final[
@@ -1106,95 +1153,12 @@ def ordemPicksBans(timeFP, timeLP, jogos, picks = None):
   return [jogo_atual]
 
 # %%
-def analisar_estrategia_bans(nome_time, ano_analise = None):
-
-    df_time = tabela_final[
-        (tabela_final["teamname"] == nome_time) & (tabela_final["position"] == "team") & (tabela_final["year"] == ano_analise)
-    ]
-
-    if df_time.empty:
-
-        print(f"Time {nome_time} não encontrado para o ano de {ano_analise}")
-        return None
-    
-    ids_dos_jogos = df_time["gameid"].unique()
-    
-    df_adv = tabela_final[
-        (tabela_final["gameid"].isin(ids_dos_jogos) & (tabela_final["teamname"] != nome_time) & (tabela_final["position"] == "team"))
-    ]
-    
-    
-    def processar_bans(df_contexto):
-
-        total_jogos = len(df_contexto)
-
-        if total_jogos == 0:
-            return pd.DataFrame()
-        
-        bans_f1 = pd.concat([df_contexto["ban1"], df_contexto["ban2"], df_contexto["ban3"]]).value_counts()
-
-        cols_bans = [f"ban{i}" for i in range(1, 6)]
-        bans_totais = pd.concat([df_contexto[col] for col in cols_bans]).value_counts()
-
-        df_resumo = pd.DataFrame({
-            "%_Bans_F1": (bans_f1 / total_jogos * 100).round(1),
-            "Bans_F1": bans_f1,
-            "%_Bans_Totais": (bans_totais / total_jogos * 100).round(1),
-            "Bans_Totais": bans_totais
-        }).fillna(0)
-
-        df_resumo[["Bans_Totais", "Bans_F1"]] = df_resumo[["Bans_Totais", "Bans_F1"]].astype(int)
-        
-        return df_resumo.sort_values(by = "Bans_F1", ascending = False)
-    
-    
-    def imprimir_duelo(df_principal, df_adv, titulo, jogos):
-        print(f"\n{'-'* 60}")
-        print(f"{titulo} - Jogos: {jogos}")
-        print(f"{'-'* 60}")
-
-        resumo_principal = processar_bans(df_principal)
-        resumo_adv = processar_bans(df_adv)
-
-        print("\n[SEUS BANS]")
-        print(resumo_principal.head(10).to_string())
-        print("\n[BANS DO ADVERSÁRIO CONTRA VOCÊ]")
-        print(resumo_adv.head(10).to_string())
-
- 
-    print(f"\n{'='* 60}")
-    print(f"ANÁLISE DE BANS: {nome_time} | TEMPORADA {ano_analise}")
-    print(f"{'='* 60}")
-
-    imprimir_duelo(df_time, df_adv, "[BANS GERAIS NO ANO]", len(df_time))
-    
-    # FP
-
-    df_fp = df_time[df_time["firstPick"] == 1]
-    ids_fp = df_fp["gameid"].unique()
-    df_adv_lp = df_adv[df_adv["gameid"].isin(ids_fp)]
-    
-
-    imprimir_duelo(df_fp, df_adv_lp, "[BANS QUANDO VOCÊ TEM O FIRST PICK]", len(df_fp))
-
-    # LP
-
-    df_lp = df_time[df_time["firstPick"] == 0]
-    ids_lp = df_lp["gameid"].unique()
-    df_adv_fp = df_adv[df_adv["gameid"].isin(ids_lp)]
-
-    imprimir_duelo(df_lp, df_adv_fp, "[BANS QUANDO VOCÊ É LAST PICK]", len(df_lp))
-
-# %%
-print(analisar_estrategia_bans("Leviatan", 2026))
-
-# %%
 times_liga_ativa = tabela_liga_ativa["teamname"].unique()
 
 print(times_liga_ativa)
 
 # %%
-time1 = "FURIA"
+time1 = "Fluxo W7M"
 time2 = "LØS"
 
 historico_fearless = []
@@ -1231,17 +1195,5 @@ for i, jogo in enumerate(resultado_serie):
         print(f"⚠️  FEARLESS (Já usados na série):")
         print(f"[{', '.join(usados_antes)}]")
         print("-" * 60)
-
-# %%
-time1 = "LOUD"
-time2 = "FURIA"
-df_time1 = gerar_df_time(time1)
-df_time2 = gerar_df_time(time2)
-
-if df_time1 is not None and df_time2 is not None:
-    print(time1)
-    #display(df_time1.head(10))
-    print(time2)
-    #display(df_time2.head(10))
 
 
