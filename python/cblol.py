@@ -221,6 +221,21 @@ def analisar_estrategias(nome_time, ano_analise = None):
     df_adv_fp = tabela_final[(tabela_final["gameid"].isin(ids_fp) & (tabela_final["teamname"] != nome_time) & (tabela_final["position"] == "team"))]
     df_adv_lp = tabela_final[(tabela_final["gameid"].isin(ids_lp) & (tabela_final["teamname"] != nome_time) & (tabela_final["position"] == "team"))]
 
+    def processar_first_pick(df_contexto):
+
+        df_fp = df_contexto[df_contexto["firstPick"] == 1]
+        total_jogos_fp = len(df_fp)
+
+        stats = df_fp["pick1"].value_counts()
+
+        df_resumo_fp = pd.DataFrame({
+            "champion": stats.index,
+            "picks": stats.values,
+            "pick_rate": (stats.values / total_jogos_fp * 100).round(1)
+        }) 
+
+        return df_resumo_fp.head(10).to_dict(orient = "records")
+
 
     def processar_picks(df_contexto):
 
@@ -238,8 +253,8 @@ def analisar_estrategias(nome_time, ano_analise = None):
 
         return stats.reset_index().to_dict(orient = "records")
 
-
-    def processar_bans(df_contexto):
+    
+    def processar_bans_fase1(df_contexto):
 
         total_jogos = len(df_contexto)
 
@@ -248,21 +263,32 @@ def analisar_estrategias(nome_time, ano_analise = None):
         
         bans_f1 = pd.concat([df_contexto["ban1"], df_contexto["ban2"], df_contexto["ban3"]]).value_counts()
 
+        df_bans_fase1 = pd.DataFrame({
+            "champion": bans_f1.index,
+            "qtd": bans_f1.values,
+            "rate": (bans_f1.values / total_jogos * 100).round(1)
+        }).fillna(0)
+        
+        return df_bans_fase1.head(10).to_dict(orient = "records")
+
+
+    def processar_bans_totais(df_contexto):
+
+        total_jogos = len(df_contexto)
+
+        if total_jogos == 0:
+            return []
+
         cols_bans = [f"ban{i}" for i in range(1, 6)]
         bans_totais = pd.concat([df_contexto[col] for col in cols_bans]).value_counts()
 
-        df_resumo = pd.DataFrame({
-            "pct_bans_f1": (bans_f1 / total_jogos * 100).round(1),
-            "bans_f1": bans_f1,
-            "pct_bans_totais": (bans_totais / total_jogos * 100).round(1),
-            "bans_totais": bans_totais
+        df_bans_totais = pd.DataFrame({
+            "champion": bans_totais.index,
+            "bans_totais": bans_totais.values,
+            "rate": (bans_totais.values / total_jogos * 100).round(1)
         }).fillna(0)
 
-        df_resumo[["bans_totais", "bans_f1"]] = df_resumo[["bans_totais", "bans_f1"]].astype(int)
-        df_resumo = df_resumo.sort_values(by = "bans_f1", ascending = False).head(10)
-        df_resumo.index.name = "champion"
-
-        return df_resumo.reset_index().to_dict(orient = "records")
+        return df_bans_totais.sort_values("bans_totais", ascending=False).head(10).to_dict(orient="records")
 
 
     def montar_bloco(df_picks, df_filtro, df_adv, titulo, jogos):
@@ -270,9 +296,12 @@ def analisar_estrategias(nome_time, ano_analise = None):
         return {
             "titulo": titulo,
             "jogos": int(jogos),  
+            "prioridade_fp": processar_first_pick(df_filtro),
             "picks": processar_picks(df_picks), 
-            "seus_bans": processar_bans(df_filtro),
-            "bans_contra": processar_bans(df_adv), 
+            "bans_f1": processar_bans_fase1(df_filtro),
+            "seus_bans": processar_bans_totais(df_filtro),
+            "bans_adv_f1":processar_bans_fase1(df_adv),
+            "bans_contra": processar_bans_totais(df_adv), 
         }
 
 

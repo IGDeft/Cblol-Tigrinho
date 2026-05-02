@@ -11,230 +11,87 @@
       --bg3:       #101e2e;
       --border:    #1a3048;
       --teal:      #00c9c9;
-      --teal-dim:  #0a4a4a;
       --teal-glow: rgba(0,201,201,0.12);
       --red:       #e84040;
-      --red-dim:   #3a1010;
       --green:     #3ecf6e;
       --gold:      #f0b429;
+      --blue:      #60b8e8;
       --text:      #b8cfe0;
       --text-dim:  #4a6880;
       --text-hi:   #e8f4ff;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-      font-size: 13px;
-      min-height: 100vh;
-    }
-
-    /* ── LAYOUT ── */
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px; min-height: 100vh; }
     .layout { display: flex; min-height: 100vh; }
 
     /* ── SIDEBAR ── */
     .sidebar {
-      width: 210px; min-width: 210px;
-      background: var(--bg2);
-      border-right: 1px solid var(--border);
-      display: flex; flex-direction: column;
-      padding: 16px 10px; gap: 8px;
-      position: sticky; top: 0; height: 100vh; overflow: hidden;
+      width: 210px; min-width: 210px; background: var(--bg2);
+      border-right: 1px solid var(--border); display: flex; flex-direction: column;
+      padding: 16px 10px; gap: 8px; position: sticky; top: 0; height: 100vh; overflow: hidden;
     }
-
-    .sidebar-logo {
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 18px; font-weight: 700;
-      color: var(--teal);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      padding: 0 4px 12px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 4px;
-    }
-
+    .sidebar-logo { font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 700; color: var(--teal); letter-spacing: 2px; text-transform: uppercase; padding: 0 4px 12px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
     .sidebar-logo span { color: var(--text-dim); font-weight: 500; }
-
-    .sidebar label {
-      color: var(--text-dim); font-size: 10px;
-      text-transform: uppercase; letter-spacing: 1px;
-      padding: 0 4px; margin-top: 4px;
-    }
-
-    .sidebar input, .sidebar select {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 6px 9px; border-radius: 4px;
-      font-size: 12px; width: 100%;
-      font-family: 'Inter', sans-serif;
-      transition: border-color .15s;
-    }
-    .sidebar input:focus, .sidebar select:focus {
-      outline: none; border-color: var(--teal);
-    }
+    .sidebar label { color: var(--text-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 0 4px; margin-top: 4px; }
+    .sidebar input, .sidebar select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 9px; border-radius: 4px; font-size: 12px; width: 100%; font-family: 'Inter', sans-serif; transition: border-color .15s; }
+    .sidebar input:focus, .sidebar select:focus { outline: none; border-color: var(--teal); }
     .sidebar select option { background: var(--bg2); }
-
-    .times-lista {
-      overflow-y: auto; flex: 1;
-      display: flex; flex-direction: column; gap: 1px;
-      margin-top: 4px;
-    }
+    .times-lista { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 1px; margin-top: 4px; }
     .times-lista::-webkit-scrollbar { width: 3px; }
     .times-lista::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    .time-item {
-      padding: 7px 9px; border-radius: 3px;
-      cursor: pointer; font-size: 12px;
-      color: var(--text-dim);
-      transition: all .12s;
-      border-left: 2px solid transparent;
-    }
+    .time-item { padding: 7px 9px; border-radius: 3px; cursor: pointer; font-size: 12px; color: var(--text-dim); transition: all .12s; border-left: 2px solid transparent; }
     .time-item:hover { background: var(--bg3); color: var(--text); }
-    .time-item.ativo {
-      background: var(--teal-glow);
-      color: var(--teal);
-      border-left-color: var(--teal);
-      font-weight: 600;
-    }
+    .time-item.ativo { background: var(--teal-glow); color: var(--teal); border-left-color: var(--teal); font-weight: 600; }
 
     /* ── CONTENT ── */
-    .content {
-      flex: 1; padding: 20px;
-      display: flex; flex-direction: column; gap: 16px;
-      overflow-y: auto; min-width: 0;
-    }
-
-    .empty {
-      color: var(--text-dim); font-size: 15px;
-      text-align: center; margin-top: 100px;
-      font-family: 'Rajdhani', sans-serif;
-      letter-spacing: 1px;
-    }
-
-    .loading {
-      color: var(--teal); text-align: center;
-      padding: 40px; font-size: 13px;
-      letter-spacing: 2px; text-transform: uppercase;
-      animation: pulse 1.2s ease-in-out infinite;
-    }
+    .content { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; min-width: 0; }
+    .empty { color: var(--text-dim); font-size: 15px; text-align: center; margin-top: 100px; font-family: 'Rajdhani', sans-serif; letter-spacing: 1px; }
+    .loading { color: var(--teal); text-align: center; padding: 40px; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; animation: pulse 1.2s ease-in-out infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-    /* ── PAGE HEADER ── */
-    .page-header {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 16px 20px;
-      display: flex; align-items: center; gap: 20px;
-      flex-wrap: wrap;
-    }
-
-    .page-title {
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 26px; font-weight: 700;
-      color: var(--text-hi);
-      letter-spacing: 1px;
-    }
-
-    .page-sub {
-      color: var(--text-dim); font-size: 11px;
-      margin-top: 2px; letter-spacing: .5px;
-    }
-
+    /* ── HEADER ── */
+    .page-header { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .page-title { font-family: 'Rajdhani', sans-serif; font-size: 26px; font-weight: 700; color: var(--text-hi); letter-spacing: 1px; }
+    .page-sub { color: var(--text-dim); font-size: 11px; margin-top: 2px; letter-spacing: .5px; }
     .pills { display: flex; gap: 8px; flex-wrap: wrap; }
-
-    .pill {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-      padding: 4px 10px; border-radius: 4px;
-      font-size: 11px; font-weight: 600;
-    }
+    .pill { background: var(--bg3); border: 1px solid var(--border); color: var(--text-dim); padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; }
     .pill strong { color: var(--teal); margin-left: 4px; }
 
     /* ── TABS ── */
-    .tabs {
-      display: flex; gap: 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .tab {
-      padding: 8px 18px; cursor: pointer;
-      font-size: 12px; font-weight: 600;
-      color: var(--text-dim);
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
-      transition: all .15s;
-      text-transform: uppercase; letter-spacing: .8px;
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 13px;
-    }
+    .tabs { display: flex; border-bottom: 1px solid var(--border); }
+    .tab { padding: 8px 18px; cursor: pointer; color: var(--text-dim); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s; text-transform: uppercase; letter-spacing: .8px; font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 600; }
     .tab:hover { color: var(--text); }
     .tab.ativo { color: var(--teal); border-bottom-color: var(--teal); }
-
     .tab-content { display: none; flex-direction: column; gap: 14px; }
     .tab-content.ativo { display: flex; }
 
-    /* ── GRID DE TABELAS ── */
-    .grid-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 12px;
-    }
+    /* ── SEÇÃO LABEL ── */
+    .secao-label { font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); padding: 4px 0 2px; border-bottom: 1px solid var(--border); margin-bottom: 2px; }
 
-    @media (max-width: 1100px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 750px)  { .grid-3 { grid-template-columns: 1fr; } }
+    /* ── GRIDS ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
 
-    /* ── CARD TABELA ── */
-    .card {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      overflow: hidden;
-    }
-
-    .card-header {
-      padding: 8px 13px;
-      font-size: 10px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 1.2px;
-      display: flex; align-items: center; gap: 7px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .card-header.azul  { background: #091828; color: #60b8e8; }
-    .card-header.verde { background: #091a10; color: #3ecf6e; }
-    .card-header.vermelho { background: #180909; color: #e84040; }
-
-    .card-header .dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .azul .dot     { background: #60b8e8; box-shadow: 0 0 6px #60b8e8; }
-    .verde .dot    { background: #3ecf6e; box-shadow: 0 0 6px #3ecf6e; }
-    .vermelho .dot { background: #e84040; box-shadow: 0 0 6px #e84040; }
+    /* ── CARD ── */
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+    .card-header { padding: 8px 13px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; display: flex; align-items: center; gap: 7px; border-bottom: 1px solid var(--border); }
+    .card-header.azul     { background: #091828; color: var(--blue); }
+    .card-header.verde    { background: #091a10; color: var(--green); }
+    .card-header.vermelho { background: #180909; color: var(--red); }
+    .card-header.gold     { background: #1a1400; color: var(--gold); }
+    .card-header.teal     { background: #051515; color: var(--teal); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .azul .dot     { background: var(--blue);  box-shadow: 0 0 6px var(--blue); }
+    .verde .dot    { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .vermelho .dot { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+    .gold .dot     { background: var(--gold);  box-shadow: 0 0 6px var(--gold); }
+    .teal .dot     { background: var(--teal);  box-shadow: 0 0 6px var(--teal); }
 
     /* ── TABELA ── */
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
-
-    th {
-      background: var(--bg);
-      color: var(--text-dim);
-      text-align: left; padding: 5px 10px;
-      font-size: 10px; text-transform: uppercase;
-      letter-spacing: .5px; font-weight: 600;
-      white-space: nowrap;
-    }
-
-    td {
-      padding: 5px 10px;
-      border-top: 1px solid #0d1e2e;
-      white-space: nowrap;
-    }
-
+    th { background: var(--bg); color: var(--text-dim); text-align: left; padding: 5px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; white-space: nowrap; }
+    td { padding: 5px 10px; border-top: 1px solid #0d1e2e; white-space: nowrap; }
     tr:hover td { background: rgba(0,201,201,0.04); }
     td:first-child { color: var(--text-hi); font-weight: 500; }
 
@@ -246,21 +103,12 @@
     .bar-red   { background: var(--red); }
     .bar-green { background: var(--green); }
     .bar-gold  { background: var(--gold); }
+    .bar-blue  { background: var(--blue); }
     .bar-pct   { min-width: 34px; text-align: right; font-size: 11px; color: var(--text-dim); }
-
-    /* ── CORES DE VALOR ── */
-    .val-teal  { color: var(--teal); }
-    .val-green { color: var(--green); }
-    .val-red   { color: var(--red); }
-    .val-gold  { color: var(--gold); }
     .val-dim   { color: var(--text-dim); }
 
-    /* ── WIN RATE BADGE ── */
-    .wr-badge {
-      display: inline-block;
-      padding: 1px 6px; border-radius: 3px;
-      font-size: 11px; font-weight: 600;
-    }
+    /* ── WR BADGE ── */
+    .wr-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; }
     .wr-hi  { background: rgba(62,207,110,.15); color: var(--green); }
     .wr-mid { background: rgba(240,180,41,.1);  color: var(--gold); }
     .wr-lo  { background: rgba(232,64,64,.15);  color: var(--red); }
@@ -269,8 +117,6 @@
 <body>
 
 <div class="layout">
-
-  <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-logo">Draft<span>Lab</span></div>
     <label>Buscar time</label>
@@ -285,11 +131,9 @@
     <div class="times-lista" id="listaTimesEl"></div>
   </aside>
 
-  <!-- CONTENT -->
   <div class="content" id="content">
     <div class="empty">← Selecione um time</div>
   </div>
-
 </div>
 
 <script>
@@ -297,7 +141,6 @@ const API = 'http://localhost:5000';
 let todosOsTimes = [];
 let timeSelecionado = '';
 
-// ── Init ──────────────────────────────────────────────────
 async function init() {
   try {
     const r = await fetch(`${API}/times`);
@@ -320,7 +163,6 @@ function renderTimes(lista) {
   ).join('');
 }
 
-// ── Carregar ──────────────────────────────────────────────
 async function carregarTime(nome) {
   timeSelecionado = nome;
   filtrarTimes();
@@ -340,7 +182,6 @@ async function carregarTime(nome) {
   }
 }
 
-// ── Render principal ──────────────────────────────────────
 function renderAnalise(d) {
   const c = document.getElementById('content');
   const anoLabel = d.ano ? `Temporada ${d.ano}` : 'Todas as temporadas';
@@ -377,85 +218,95 @@ function trocarAba(nome, el) {
   document.getElementById('aba-' + nome).classList.add('ativo');
 }
 
-// ── Bloco (3 tabelas lado a lado) ────────────────────────
-function renderBloco(bloco) {
+function renderBloco(b) {
   return `
-    <div class="grid-3">
+    <div class="secao-label">Picks</div>
+    <div class="grid-2">
       <div class="card">
         <div class="card-header verde"><span class="dot"></span>Picks do Time</div>
-        ${tabelaPicks(bloco.picks)}
+        ${tabelaPicks(b.picks)}
       </div>
       <div class="card">
-        <div class="card-header azul"><span class="dot"></span>Seus Bans</div>
-        ${tabelaBans(bloco.seus_bans, 'teal')}
+        <div class="card-header gold"><span class="dot"></span>Prioridade First Pick (P1)</div>
+        ${tabelaFP(b.prioridade_fp)}
+      </div>
+    </div>
+
+    <div class="secao-label">Seus Bans</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header teal"><span class="dot"></span>Bans Fase 1</div>
+        ${tabelaBans(b.bans_f1, 'teal', 'qtd', 'rate')}
       </div>
       <div class="card">
-        <div class="card-header vermelho"><span class="dot"></span>Bans contra você</div>
-        ${tabelaBans(bloco.bans_contra, 'red')}
+        <div class="card-header azul"><span class="dot"></span>Bans Totais</div>
+        ${tabelaBans(b.seus_bans, 'blue', 'bans_totais', 'rate')}
+      </div>
+    </div>
+
+    <div class="secao-label">Bans do Adversário Contra Você</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header vermelho"><span class="dot"></span>Bans Fase 1</div>
+        ${tabelaBans(b.bans_adv_f1, 'red', 'qtd', 'rate')}
+      </div>
+      <div class="card">
+        <div class="card-header vermelho"><span class="dot"></span>Bans Totais</div>
+        ${tabelaBans(b.bans_contra, 'red', 'bans_totais', 'rate')}
       </div>
     </div>
   `;
 }
 
-// ── Tabela de Picks ───────────────────────────────────────
 function tabelaPicks(lista) {
   if (!lista?.length) return vazio();
-  const maxPicks = lista[0]?.picks ?? 1;
-
-  const linhas = lista.map(row => {
-    const wr = row.win_rate ?? 0;
-    const barW = Math.min(100, Math.round((row.picks / maxPicks) * 100));
-    const wrClass = wr >= 60 ? 'wr-hi' : wr >= 45 ? 'wr-mid' : 'wr-lo';
-    return `
-      <tr>
-        <td>${row.champion}</td>
-        <td>
-          <div class="bar-cell">
-            <div class="bar-wrap"><div class="bar-fill bar-green" style="width:${barW}%"></div></div>
-            <span class="bar-pct val-dim">${row.pick_rate}%</span>
-          </div>
-        </td>
-        <td class="val-dim">${row.picks}</td>
-        <td><span class="wr-badge ${wrClass}">${wr}%</span></td>
-      </tr>`;
-  }).join('');
-
+  const max = lista[0]?.picks ?? 1;
   return `<table>
-    <thead><tr>
-      <th>Campeão</th><th>Pick Rate</th><th>#</th><th>Win Rate</th>
-    </tr></thead>
-    <tbody>${linhas}</tbody>
+    <thead><tr><th>Campeão</th><th>Pick Rate</th><th>#</th><th>Win Rate</th></tr></thead>
+    <tbody>${lista.map(row => {
+      const wr = row.win_rate ?? 0;
+      const barW = Math.min(100, Math.round((row.picks / max) * 100));
+      const wrC = wr >= 60 ? 'wr-hi' : wr >= 45 ? 'wr-mid' : 'wr-lo';
+      return `<tr>
+        <td>${row.champion}</td>
+        <td><div class="bar-cell"><div class="bar-wrap"><div class="bar-fill bar-green" style="width:${barW}%"></div></div><span class="bar-pct val-dim">${row.pick_rate}%</span></div></td>
+        <td class="val-dim">${row.picks}</td>
+        <td><span class="wr-badge ${wrC}">${wr}%</span></td>
+      </tr>`;
+    }).join('')}</tbody>
   </table>`;
 }
 
-// ── Tabela de Bans ────────────────────────────────────────
-function tabelaBans(lista, cor) {
+function tabelaFP(lista) {
   if (!lista?.length) return vazio();
-  const maxVal = lista[0]?.bans_f1 ?? 1;
-  const barClass = cor === 'red' ? 'bar-red' : 'bar-teal';
-
-  const linhas = lista.map(row => {
-    const barW = Math.min(100, Math.round((row.bans_f1 / maxVal) * 100));
-    return `
-      <tr>
-        <td>${row.champion}</td>
-        <td>
-          <div class="bar-cell">
-            <div class="bar-wrap"><div class="bar-fill ${barClass}" style="width:${barW}%"></div></div>
-            <span class="bar-pct">${row.pct_bans_f1}%</span>
-          </div>
-        </td>
-        <td class="val-dim">${row.bans_f1}</td>
-        <td class="val-dim">${row.pct_bans_totais}%</td>
-        <td class="val-dim">${row.bans_totais}</td>
-      </tr>`;
-  }).join('');
-
+  const max = lista[0]?.picks ?? 1;
   return `<table>
-    <thead><tr>
-      <th>Campeão</th><th>% F1</th><th>#F1</th><th>% Tot</th><th>#Tot</th>
-    </tr></thead>
-    <tbody>${linhas}</tbody>
+    <thead><tr><th>Campeão</th><th>Freq. P1</th><th>#</th></tr></thead>
+    <tbody>${lista.map(row => {
+      const barW = Math.min(100, Math.round((row.picks / max) * 100));
+      return `<tr>
+        <td>${row.champion}</td>
+        <td><div class="bar-cell"><div class="bar-wrap"><div class="bar-fill bar-gold" style="width:${barW}%"></div></div><span class="bar-pct val-dim">${row.pick_rate}%</span></div></td>
+        <td class="val-dim">${row.picks}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function tabelaBans(lista, cor, campoQtd, campoPct) {
+  if (!lista?.length) return vazio();
+  const max = lista[0]?.[campoQtd] ?? 1;
+  const barC = { teal:'bar-teal', blue:'bar-blue', red:'bar-red', gold:'bar-gold' }[cor] ?? 'bar-teal';
+  return `<table>
+    <thead><tr><th>Campeão</th><th>Rate</th><th>#</th></tr></thead>
+    <tbody>${lista.map(row => {
+      const barW = Math.min(100, Math.round((row[campoQtd] / max) * 100));
+      return `<tr>
+        <td>${row.champion}</td>
+        <td><div class="bar-cell"><div class="bar-wrap"><div class="bar-fill ${barC}" style="width:${barW}%"></div></div><span class="bar-pct">${row[campoPct]}%</span></div></td>
+        <td class="val-dim">${row[campoQtd]}</td>
+      </tr>`;
+    }).join('')}</tbody>
   </table>`;
 }
 
@@ -463,7 +314,6 @@ function vazio() {
   return '<div style="padding:14px;color:var(--text-dim);font-size:12px">Sem dados</div>';
 }
 
-// Recarregar ao trocar ano
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('anoSelect').addEventListener('change', () => {
     if (timeSelecionado) carregarTime(timeSelecionado);
