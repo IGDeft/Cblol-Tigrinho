@@ -384,6 +384,8 @@ patch_max = tabela_final["patch_rank"].max()
 tabela_final["patch_peso"] = np.exp(- 0.05 * (patch_max - tabela_final["patch_rank"]))
 
 # %%
+# COdigo que deu errado
+
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 
@@ -496,15 +498,42 @@ tabela_ia["num_picks"] = tabela_ia.groupby("gameid").cumcount()
 
 tabela_ia["peso_final"] = tabela_ia["peso_final"].fillna(1.0)
 
-tabela_ia["pick_rate"] = tabela_ia["pick_rate"] * 0.5
-tabela_ia["ban_rate"] = tabela_ia["ban_rate"] * 0.5
+ordem_picks = tabela_ia.set_index(["gameid", "champion_num"])["num_picks"].to_dict()
 
+def oculto(linha):
+
+    atual = linha["num_picks"]
+    gameid = linha["gameid"]
+
+    for p in ["p1", "p2", "p3", "p4"]:
+
+        champ_num = linha[p]
+
+        if champ_num != -1:
+            ordem = ordem_picks.get((gameid, champ_num), 99)
+
+            if ordem >= atual:
+                linha[p] = -1
+    
+    for o in ["o1", "o2", "o3", "o4", "o5"]:
+
+        champ_num = linha[o]
+
+        if champ_num != -1:
+            ordem = ordem_picks.get((gameid, champ_num), 99)
+        
+            if ordem >= atual:
+                linha[o] = -1
+
+    return linha
+    
+tabela_ia = tabela_ia.apply(oculto, axis = 1)
 
 # Treino IA
 
 colunas_treino = [
     "teamname_num", "oponente_num", "position_num", "firstPick",
-    "pick_rate", "ban_rate", "num_picks", 
+    "num_picks",  
     "p1", "p2", "p3", "p4",
     "o1", "o2", "o3", "o4", "o5"
 ]
@@ -678,35 +707,34 @@ matchup_total = {}
 
 for game, jogo in dados_players_global.groupby("gameid"):
     times = jogo["teamname"].unique()
+
     if len(times) != 2:
         continue
 
-    for rota in ["top", "jng", "mid", "bot", "sup"]:
-        lane = jogo[jogo["position"] == rota]
-        if len(lane) < 2:
-            continue
+    time_a, time_b = times[0], times[1]
+    camp_a = jogo[jogo["teamname"] == time_a]
+    camp_b = jogo[jogo["teamname"] == time_b]
 
-        time_a, time_b = times[0], times[1]
-        camp_a = lane[lane["teamname"] == time_a]
-        camp_b = lane[lane["teamname"] == time_b]
+    if camp_a.empty or camp_b.empty:
+        continue
 
-        if camp_a.empty or camp_b.empty:
-            continue
+    for _, player_a in camp_a.iterrows():
+        for _, player_b in camp_b.iterrows():
 
-        nome_a = camp_a["champion"].values[0]
-        nome_b = camp_b["champion"].values[0]
-        result_a = camp_a["result"].values[0]
+            nome_a = player_a["champion"]
+            nome_b = player_b["champion"]
+            result_a = player_a["result"]
 
-        par_ab = (nome_a, nome_b)
-        par_ba = (nome_b, nome_a)
+            par_ab = (nome_a, nome_b)
+            par_ba = (nome_b, nome_a)
 
-        matchup_total[par_ab] = matchup_total.get(par_ab, 0) + 1
-        matchup_total[par_ba] = matchup_total.get(par_ba, 0) + 1
+            matchup_total[par_ab] = matchup_total.get(par_ab, 0) + 1
+            matchup_total[par_ba] = matchup_total.get(par_ba, 0) + 1
 
-        if result_a == 1:
-            matchup_vitorias[par_ab] = matchup_vitorias.get(par_ab, 0) + 1
-        else:
-            matchup_vitorias[par_ba] = matchup_vitorias.get(par_ba, 0) + 1
+            if result_a == 1:
+                matchup_vitorias[par_ab] = matchup_vitorias.get(par_ab, 0) + 1
+            else:
+                matchup_vitorias[par_ba] = matchup_vitorias.get(par_ba, 0) + 1
 
 # %%
 limiar_flex = 0.10
@@ -755,7 +783,38 @@ def get_posicoes_ocupadas(lista_picks, dna_campeoes):
                 picks_alocados.add(camp)
                 break
 
-    return list(rotas_ocupadas.keys())       
+    return list(rotas_ocupadas.keys())    
+
+
+def get_winrate(camp, contra):
+    total = matchup_total.get((camp, contra), 0)
+    if total < minimo_exposicao:
+        return 0.5
+    return matchup_vitorias.get((camp, contra), 0) / total
+
+
+def get_threshold_counter(total_jogos):
+    if total_jogos < 10:
+        return 1.0
+    elif total_jogos < 30:
+        return 0.68
+    elif total_jogos < 50:
+        return 0.63
+    elif total_jogos < 100:
+        return 0.58
+    else:
+        return 0.55
+    
+
+def get_forca_counter(camp, meu_pick):
+    total = matchup_total.get((camp, meu_pick), 0)
+    threshold = get_threshold_counter(total)
+    winrate = get_winrate(camp, meu_pick)
+
+    if winrate <= threshold:
+        return 0.0
+    
+    return min((winrate - threshold) / (1.0 -threshold), 1.0)
 
 
 def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, picks_totais, time_tem_p1_no_jogo, retornar_lista = False):
@@ -798,8 +857,14 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
         picks_time2_nums.append(-1)
 
     n_picks_feitos = len(picksTime1) + len(picksTime2)
-    peso_ia = min(0.6 + (n_picks_feitos * 0.02), 0.85)
-    peso_hist = 1 - peso_ia
+
+    t = min(n_picks_feitos / 9.0, 1.0)
+
+    peso_hist = 0.30
+    peso_ia = 0.25
+    peso_oportunidade = max(0.20 - (t * 0.20), 0.0)
+    peso_sinergia = 0.08 + (t * 0.14)
+    peso_counter = 0.17 + (t * 0.06)
 
     score_candidatos = []
 
@@ -812,7 +877,7 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
 
         cenario = pd.DataFrame([[
             id_time, id_opp, id_rota, valor_posse_p1,
-            50.0, 50.0, n_picks_feitos,
+            n_picks_feitos,
             *picks_time1_nums, *picks_time2_nums
         ]], columns = colunas_treino)
 
@@ -828,7 +893,18 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
             if dna_campeoes[camp].get(rota, 0) < limiar_flex:
                 continue
             
-            confianca_ia = raking_ia.get(camp, 0)
+            prio_ia = raking_ia.get(camp, 0)
+            bonus_sinergia = 0
+            bonus_counter= 0
+            prio_hist = 0
+
+            if camp in camp_confort_time:
+                fator_pool = 1.00
+            elif camp in todos_camps_time:
+                fator_pool = 0.15
+            else:
+                fator_pool = 0.02          
+
             bonus_oportunidade = 0
 
             total_jogos_contra = total_contra_ctx.get(time1, 1)
@@ -842,29 +918,27 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
                     decaida = max(1.0 - (n_picks_feitos * 0.25), 0)
                     bonus_oportunidade = (taxa_ameaca * 0.40) * decaida
 
-            prio_time = 0
-
-            if e_primeiro_pick_time and time_tem_p1_no_jogo:
+            if e_primeiro_pick_time and time_tem_p1_no_jogo:  
                 if camp not in pool_p1_valido:
                     continue
 
                 prio_time = prioridade_p1.loc[time1].get(camp, 0)
-                score = (prio_time * 0.95) + (confianca_ia * 0.05)
+                prio_hist = prio_time
+
+                score = ((prio_time * peso_hist) + (prio_ia * peso_ia) + (bonus_oportunidade * peso_oportunidade))
 
             else:
+                prio_time = 0
+
                 if time1 in prioridade_historica.index:
                     prio_time = prioridade_historica.loc[time1].get(camp, 0)
-                if camp in camp_confort_time:
-                    multiplicador_pool = 1.0
-                elif camp in todos_camps_time:
-                    multiplicador_pool = 0.15
-                else:
-                    multiplicador_pool = 0.02
-                    
-                score = ((prio_time * peso_hist) + (confianca_ia  * peso_ia)) * multiplicador_pool
+                
+                prio_hist = prio_time * fator_pool
+                bonus_sinergia = 0
+                bonus_counter = 0
 
                 if picksTime1:
-                    bonus_sinergia = 0
+                    lista_sinergia = []
 
                     for aliado in picksTime1:
                         par = tuple(sorted([camp, aliado]))
@@ -872,24 +946,110 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
                         n_aliado = contagem_exposicao.get(aliado, 0)
                         
                         if n_aliado >= minimo_exposicao:
-                            bonus_sinergia += n_juntos / n_aliado
-                    bonus_sinergia = min(bonus_sinergia / len(picksTime1), 0.25)
-                    score += bonus_sinergia * 0.3
+                            lista_sinergia.append(n_juntos / n_aliado)
+                    
+                    if lista_sinergia:
+                        media_sinergia = sum(lista_sinergia) / len(lista_sinergia)
+                        max_sinergia = max(lista_sinergia)
+                        bonus_sinergia = (media_sinergia * 0.6) + (max_sinergia * 0.4)
+
+                        bonus_dupla = 0.04 if max_sinergia >= 0.25 else 0
+                        bonus_sinergia = min(bonus_sinergia + bonus_dupla, 0.30)
+                    
+                    bonus_sinergia *= fator_pool
 
                 if picksTime2:
-                    bonus_counter = 0
+                    lista_forcas = []
+                    lista_punicao = []
+                    lista_resposta = []
+                    lista_puni_resp = []
+
+                    rotas_ocupadas_adv = get_posicoes_ocupadas(picksTime2, dna_campeoes)
+                    adv_lane = None
+
+                    if rota in rotas_ocupadas_adv:
+                        maior_pct = -1
+
+                        for inimigo in picksTime2:
+                            if inimigo in dna_campeoes:
+                                pct = dna_campeoes[inimigo].get(rota, 0)
+
+                                if pct > limiar_flex and pct > maior_pct:
+                                    maior_pct = pct
+                                    adv_lane = inimigo
+
+                    forca_lane = 0
+                    punicao_lane = 0            
 
                     for inimigo in picksTime2:
-                        par = (inimigo, camp)
-                        n_resposta = contagem_respostas.get(par, 0)
+                        
+                        forca = get_forca_counter(camp, inimigo)
+                        punicao = get_forca_counter(inimigo, camp)
+
+                        if inimigo == adv_lane:
+                            forca_lane = forca
+                            punicao_lane = punicao
+                        else:
+                            lista_forcas.append(forca)
+                            lista_punicao.append(punicao)
+
+                        n_resposta = contagem_respostas.get((inimigo, camp), 0)
                         n_inimigo = contagem_exposicao.get(inimigo, 0)
 
-                        if n_inimigo >= minimo_exposicao:
-                            bonus_counter +=  n_resposta / n_inimigo
-                    bonus_counter = min(bonus_counter / len(picksTime2), 0.25)
-                    score += bonus_counter * 0.2
+                        lista_resposta.append(n_resposta / n_inimigo if n_inimigo > minimo_exposicao else 0)
 
-            score += bonus_oportunidade
+                        n_punicao = contagem_respostas.get((camp, inimigo), 0)
+                        n_team = contagem_exposicao.get(camp, 0)
+
+                        lista_puni_resp.append(n_punicao / n_team if n_team > minimo_exposicao else 0)
+
+                    if len(lista_forcas) > 0:
+                        avg_forca = sum(lista_forcas) / len(lista_forcas)
+                    else:
+                        avg_forca = 0
+
+                    if len(lista_punicao) > 0:
+                        avg_punicao = sum(lista_punicao) / len(lista_punicao)
+                    else:
+                        avg_punicao = 0
+
+                    if adv_lane:
+                        balanco_positivo = (forca_lane * 0.6) + (avg_forca * 0.4)
+                        balanco_negativo = (punicao_lane * 0.6) + (avg_punicao * 0.4)
+                    else:
+                        if len(lista_forcas) > 0:
+                            max_forca = max(lista_forcas)
+                        else:
+                            max_forca = 0
+                        if len(lista_punicao) > 0:
+                            max_punicao = max(lista_punicao)
+                        else:
+                            max_punicao = 0
+                        
+                        balanco_positivo = (avg_forca * 0.6) + (max_forca * 0.4)
+                        balanco_negativo = (avg_punicao * 0.6) + (max_punicao * 0.4)
+
+                    score_matchup = min(balanco_positivo, 0.20) - min(balanco_negativo, 0.25)
+                    
+                    if len(lista_resposta) > 0:
+                        resp_pos = sum(lista_resposta) / len(lista_resposta)
+                    else:
+                        resp_pos = 0
+                    if len(lista_puni_resp) > 0:
+                        resp_neg = sum(lista_puni_resp) / len(lista_puni_resp)
+                    else:
+                        resp_neg = 0
+                    
+                    score_resposta = max(min((resp_pos - resp_neg) * 2.5, 0.15), - 0.15)
+
+                    bonus_counter_bruto = (score_matchup * 0.7) + (score_resposta * 0.3)
+                    bonus_counter = bonus_counter_bruto * fator_pool
+
+                score = (
+                    (prio_hist * peso_hist) + (prio_ia * peso_ia) + (bonus_sinergia * peso_sinergia) + 
+                    (bonus_counter * peso_counter) + (bonus_oportunidade * peso_oportunidade)
+                )
+
             score_candidatos.append((camp, score))
 
     if score_candidatos:
@@ -914,37 +1074,6 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
         )
     
     return "Fallback"
-
-
-def get_winrate(camp, contra):
-    total = matchup_total.get((camp, contra), 0)
-    if total < minimo_exposicao:
-        return 0.5
-    return matchup_vitorias.get((camp, contra), 0) / total
-
-
-def get_threshold_counter(total_jogos):
-    if total_jogos < 10:
-        return 1.0
-    elif total_jogos < 30:
-        return 0.68
-    elif total_jogos < 50:
-        return 0.63
-    elif total_jogos < 100:
-        return 0.58
-    else:
-        return 0.55
-    
-
-def get_forca_counter(camp, meu_pick):
-    total = matchup_total.get((camp, meu_pick), 0)
-    threshold = get_threshold_counter(total)
-    winrate = get_winrate(camp, meu_pick)
-
-    if winrate <= threshold:
-        return 0.0
-    
-    return min((winrate - threshold) / (1.0 -threshold), 1.0)
     
          
 def sugeriBans(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, picks, time_tem_p1_no_jogo):
@@ -1025,7 +1154,7 @@ def sugeriBans(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, picks
 
         cenario_inimigo = pd.DataFrame([[
             id_inimigo, id_aliado, id_rota, posse_p1_adv,
-            50.0, 50.0, n_picks_feitos,
+            n_picks_feitos,
             *picks_time2_nums, *picks_time1_nums
         ]], columns = colunas_treino)
 
