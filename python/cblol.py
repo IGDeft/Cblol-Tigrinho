@@ -303,16 +303,65 @@ def analisar_estrategias(nome_time, ano_analise = None):
             "bans_adv_f1":processar_bans_fase1(df_adv),
             "bans_contra": processar_bans_totais(df_adv), 
         }
+    
+
+    def pick_jogador():
+
+        if df_players_geral.empty:
+            return {}
+        
+        last_game = df_filtro.sort_values("date", ascending = False)["gameid"].iloc[0]
+        df_last_game = df_players_geral[df_players_geral["gameid"] == last_game]
+        lineup_atual = df_last_game.set_index("position")["playername"].to_dict()
+
+        resultado = {}
+
+        for pos in ["top", "jng", "mid", "bot", "sup"]:
+            df_pos = df_players_geral[df_players_geral["position"] == pos]
+            
+            if df_pos.empty:
+                continue
+            
+            titular = lineup_atual.get(pos)
+            players = []
+
+            for player in df_pos["playername"].unique():
+
+                df_player = df_pos[df_pos["playername"] == player]
+                total =  df_player["gameid"].nunique()
+
+                stats = df_player.groupby("champion").agg(
+                    picks = ("champion", "count"),
+                    vitorias = ("result", "sum")
+                )
+
+                stats["pick_rate"] = (stats["picks"] / total * 100).round(1)
+                stats["win_rate"] = (stats["vitorias"] / stats["picks"] * 100).round(1)
+
+                stats = stats.sort_values("picks", ascending = False).head(10)
+                stats.index.name = "champion"
+                
+                players.append({
+                    "player": player,
+                    "jogos": int(total),
+                    "titular": player == titular,
+                    "picks": stats.reset_index().to_dict(orient = "records")
+                })
+            
+            players.sort(key = lambda x: x["titular"], reverse = True)
+            resultado[pos] = players
+
+        return resultado
 
 
     return {
         "time": nome_time,
         "ano": ano_analise,
+        "picks_jogador": pick_jogador(),
         "geral": montar_bloco(df_players_geral, df_filtro, df_adv_geral, "Geral", len(ids_todos)),
         "fp": montar_bloco(df_players_fp,df_filtro[df_filtro["firstPick"] == 1], df_adv_fp, "First Pick", len(ids_fp)),
         "lp": montar_bloco(df_players_lp, df_filtro[df_filtro["firstPick"] == 0], df_adv_lp, "Last Pick", len(ids_lp))
     }
-
 
 # %%
 def analisar_time_adv(nome_time, ano_analise = None):
@@ -384,8 +433,6 @@ patch_max = tabela_final["patch_rank"].max()
 tabela_final["patch_peso"] = np.exp(- 0.05 * (patch_max - tabela_final["patch_rank"]))
 
 # %%
-# COdigo que deu errado
-
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 
@@ -1056,7 +1103,7 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
         score_candidatos.sort(key = lambda x: x[1], reverse = True)
         top3_picks = [camp for camp, score in score_candidatos[:3]]
         pesos = [score for camp, score in score_candidatos[:3]]
-        
+
         if retornar_lista:
             return top3_picks
         else:
@@ -1072,7 +1119,7 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
             key = lambda c: prioridade_historica.loc[time1].get(c, 0)
             if time1 in prioridade_historica.index else 0
         )
-    
+
     return "Fallback"
     
          
@@ -1316,12 +1363,12 @@ times_liga_ativa = tabela_liga_ativa["teamname"].unique()
 print(times_liga_ativa)
 
 # %%
-time1 = "Fluxo W7M"
+time1 = "Vivo Keyd Stars"
 time2 = "LØS"
 
 historico_fearless = []
 
-resultado_serie = ordemPicksBans(time1, time2, 5)
+resultado_serie = ordemPicksBans(time1, time2, 3)
 
 for i, jogo in enumerate(resultado_serie):
     pFP, bFP, pLP, bLP = jogo
