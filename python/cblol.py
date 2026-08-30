@@ -84,7 +84,9 @@ tabela_relev = [
 
     'gameid', "split", "game", "patch", "date", "playoffs", "position",
     "result", "league", "year", "league_unificada",
+
     # Jogador/Time
+    
     "playername", "teamname", "participantid", "playerid", "kills", "deaths",
     "assists", "teamkills", "teamdeaths", "earnedgoldshare", "damageshare",
 
@@ -132,7 +134,7 @@ def filtar_dados(liga = None, year = None):
     if liga is not None:
         if isinstance(liga, str):
             liga = [liga]
-        df_meta_liga = df_meta_liga[df_meta_liga["league"].isin(liga)]
+        df_meta_liga = df_meta_liga[df_meta_liga["league_unificada"].isin(liga)]
 
     return df_meta_liga
 
@@ -143,12 +145,7 @@ print(jogos_por_liga.sort_values(ascending = False))
 
 
 # %%
-# Meta
-
-ano = 2025
-liga_ativa = "CBLOL"
-
-tabela_liga_ativa = filtar_dados(liga = liga_ativa, year = None)
+tabela_liga_ativa = filtar_dados(liga = "CBLOL", year = 2026)
 
 tabela_players_ativo = tabela_liga_ativa[tabela_liga_ativa["position"] != "team"]
 tabela_team_ativo = tabela_liga_ativa[tabela_liga_ativa["position"] == "team"]
@@ -181,8 +178,6 @@ print("-" * 20)
 print("Pick Rate")
 
 print(pick_rate.head(20).round(2))
-
-# Ban Rate
 
 ban_rate = (bans_global.value_counts()/ total_jogos) * 100
 
@@ -436,6 +431,8 @@ tabela_final["patch_peso"] = np.exp(- 0.05 * (patch_max - tabela_final["patch_ra
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 
+liga_ativa = "CBLOL"
+
 # Pesos
 
 pesos_base_liga = {
@@ -446,15 +443,10 @@ pesos_base_liga = {
 
 bonus_liga_ativa = 2.5
 
-def calculo_peso_liga(row):
-    base = pesos_base_liga.get(row["league_unificada"], 1.0)
-    
-    if row["league_unificada"] == liga_ativa:
-        return base * bonus_liga_ativa
-    return base
-
 tabela_final["peso_liga"] = tabela_final["league_unificada"].map(pesos_base_liga).fillna(0.5)
-tabela_final.loc[tabela_final["league_unificada"] == liga_ativa, "peso_liga"] *= bonus_liga_ativa
+
+if liga_ativa is not None:
+    tabela_final.loc[tabela_final["league_unificada"] == liga_ativa, "peso_liga"] *= bonus_liga_ativa
 
 tabela_final["peso_final"] = tabela_final["peso_liga"] * tabela_final["patch_peso"]
 
@@ -580,7 +572,7 @@ tabela_ia = tabela_ia.apply(oculto, axis = 1)
 
 colunas_treino = [
     "teamname_num", "oponente_num", "position_num", "firstPick",
-    "num_picks",  
+    "num_picks", "patch_num",
     "p1", "p2", "p3", "p4",
     "o1", "o2", "o3", "o4", "o5"
 ]
@@ -589,9 +581,10 @@ X = tabela_ia[colunas_treino]
 y = tabela_ia["champion_num"]
 
 modelo_ia = RandomForestClassifier(
-    n_estimators = 300,
+    n_estimators = 150,
+    min_samples_leaf = 12,
     max_depth = 20,
-    min_samples_leaf = 2,
+    max_leaf_nodes = 3000,
     random_state = 42
 )
 
@@ -692,6 +685,8 @@ for gameid, jogo_equipe in tabela_times_liga.groupby("gameid"):
 
 
 # %%
+import itertools
+
 dados_players_global = tabela_final[tabela_final["position"] != "team"]
 tabela_times_global = tabela_final[tabela_final["position"] == "team"]
 
@@ -728,6 +723,8 @@ for gameid, jogo in dados_players_global.groupby("gameid"):
 ban_fase2_por_pick = {}
 total_pick_fase2 = {}
 
+picks_por_time = dados_players_global.groupby(["gameid", "teamname"])["champion"].apply(list).to_dict()
+
 for gameid, jogo_team in tabela_times_global.groupby("gameid"):
     times = jogo_team["teamname"].unique()
 
@@ -735,17 +732,14 @@ for gameid, jogo_team in tabela_times_global.groupby("gameid"):
         continue
 
     for time in times:
-        picks_time = dados_players_global[
-            (dados_players_global["gameid"] == gameid) & (dados_players_global["teamname"] == time)
-        ]["champion"].tolist()
-
+        picks_time = picks_por_time.get((gameid, time), [])
         ban_fase2 = jogo_team[jogo_team["teamname"] == time][["ban4", "ban5"]].values.flatten().tolist()
 
         for pick in picks_time:
             total_pick_fase2[pick] = total_pick_fase2.get(pick, 0) + 1
 
             for ban in ban_fase2:
-            
+                
                 if pd.notna(ban):
                     ban_fase2_por_pick[(pick, ban)] = ban_fase2_por_pick.get((pick, ban), 0) + 1
 
@@ -765,28 +759,27 @@ for game, jogo in dados_players_global.groupby("gameid"):
     if camp_a.empty or camp_b.empty:
         continue
 
-    for _, player_a in camp_a.iterrows():
-        for _, player_b in camp_b.iterrows():
+    champs_a = camp_a["champion"].tolist()
+    champs_b = camp_b["champion"].tolist()
+    result_a = camp_a["result"].iloc[0]
 
-            nome_a = player_a["champion"]
-            nome_b = player_b["champion"]
-            result_a = player_a["result"]
+    for nome_a, nome_b in itertools.product(champs_a, champs_b):
+        par_ab = (nome_a, nome_b)
+        par_ba = (nome_b, nome_a)
 
-            par_ab = (nome_a, nome_b)
-            par_ba = (nome_b, nome_a)
+        matchup_total[par_ab] = matchup_total.get(par_ab, 0) + 1
+        matchup_total[par_ba] = matchup_total.get(par_ba, 0) + 1
 
-            matchup_total[par_ab] = matchup_total.get(par_ab, 0) + 1
-            matchup_total[par_ba] = matchup_total.get(par_ba, 0) + 1
-
-            if result_a == 1:
-                matchup_vitorias[par_ab] = matchup_vitorias.get(par_ab, 0) + 1
-            else:
-                matchup_vitorias[par_ba] = matchup_vitorias.get(par_ba, 0) + 1
+        if result_a == 1:
+            matchup_vitorias[par_ab] = matchup_vitorias.get(par_ab, 0) + 1
+        else:
+            matchup_vitorias[par_ba] = matchup_vitorias.get(par_ba, 0) + 1
 
 # %%
 limiar_flex = 0.10
 minimo_exposicao = 3
 limitar_ban_proprio = 0.03
+patch_atual = int(tabela_final["patch_num"].max())
 
 
 def gerar_Dna_Automatico(df_completo):
@@ -924,7 +917,7 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
 
         cenario = pd.DataFrame([[
             id_time, id_opp, id_rota, valor_posse_p1,
-            n_picks_feitos,
+            n_picks_feitos, patch_atual,
             *picks_time1_nums, *picks_time2_nums
         ]], columns = colunas_treino)
 
@@ -1201,7 +1194,7 @@ def sugeriBans(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, picks
 
         cenario_inimigo = pd.DataFrame([[
             id_inimigo, id_aliado, id_rota, posse_p1_adv,
-            n_picks_feitos,
+            n_picks_feitos, patch_atual,
             *picks_time2_nums, *picks_time1_nums
         ]], columns = colunas_treino)
 
@@ -1363,8 +1356,8 @@ times_liga_ativa = tabela_liga_ativa["teamname"].unique()
 print(times_liga_ativa)
 
 # %%
-time1 = "Vivo Keyd Stars"
-time2 = "LØS"
+time1 = "RED Canids"
+time2 = "LOUD"
 
 historico_fearless = []
 
