@@ -450,7 +450,8 @@ if liga_ativa is not None:
 
 tabela_final["peso_final"] = tabela_final["peso_liga"] * tabela_final["patch_peso"]
 
-tabela_ml = tabela_final.copy()
+tabela_ml_completa = tabela_final.copy()
+tabela_ml = tabela_final[tabela_final["position"] != "team"].copy()
 
 # Codificadores
 
@@ -459,11 +460,14 @@ cod_pos = LabelEncoder()
 cod_camp = LabelEncoder()
 
 todos_os_times = list(tabela_ml["teamname"].unique()) + ["Desconhecidos"]
+todos_campeoes = pd.concat([tabela_ml["champion"], tabela_ml_completa[tabela_ml_completa["position"] == "team"][["ban1", "ban2", "ban3", "ban4", "ban5"]].melt()["value"]]).dropna().unique()
+
 cod_time.fit(todos_os_times)
+cod_camp.fit(todos_campeoes)
 
 tabela_ml["teamname_num"] = cod_time.transform(tabela_ml["teamname"])
 tabela_ml["position_num"] = cod_pos.fit_transform(tabela_ml["position"])
-tabela_ml["champion_num"] = cod_camp.fit_transform(tabela_ml["champion"])
+tabela_ml["champion_num"] = cod_camp.transform(tabela_ml["champion"])
 
 # Mapeamento dos Times
 
@@ -508,40 +512,70 @@ tabela_ia = pd.merge(tabela_ia, df_inimigos, on = ["gameid", "teamname"], how = 
 
 # Oponentes
 
-df_agrupados_global = tabela_ml.groupby([
-    "gameid", "teamname", "result", "firstPick", "game",
-    "ban1", "ban2", "ban3", "pick1", "pick2",
-    "pick3", "ban4", "ban5", "pick4", "pick5"
-]).size().reset_index()
+tabela_times = tabela_ml_completa[tabela_ml_completa["position"] == "team"].copy()
+tabela_times = tabela_times.drop_duplicates(subset = ["gameid", "teamname"])
 
-df_confronto_global = pd.merge(df_agrupados_global, df_agrupados_global, on = ["gameid", "game"], suffixes = ("_time1", "_time2"))
-df_confronto_global = df_confronto_global[df_confronto_global["teamname_time1"] != df_confronto_global["teamname_time2"]]
-df_confronto_global = df_confronto_global.drop_duplicates(subset = ["gameid"], keep = "first")
+df_confronto_ia = tabela_times.merge(tabela_times, on = "gameid", suffixes = ("_time", "_oponente"))
+df_confronto_ia = df_confronto_ia[df_confronto_ia["teamname_time"] != df_confronto_ia["teamname_oponente"]]
 
-oponentes_t1 = df_confronto_global[["gameid", "teamname_time1", "teamname_time2"]].rename(
-    columns = {"teamname_time1": "teamname", "teamname_time2": "oponente"})
-
-oponentes_t2 = df_confronto_global[["gameid", "teamname_time2", "teamname_time1"]].rename(
-    columns = {"teamname_time2": "teamname", "teamname_time1": "oponente"}
+df_relacao_oponente = df_confronto_ia[["gameid", "teamname_time", "teamname_oponente"]].rename(
+    columns = {"teamname_time" : "teamname", "teamname_oponente" : "oponente"}
 )
-
-df_relacao_oponente = pd.concat([oponentes_t1, oponentes_t2])
 
 tabela_ia = pd.merge(tabela_ia, df_relacao_oponente, on = ["gameid", "teamname"], how = "left")
 tabela_ia["oponente"] = tabela_ia["oponente"].fillna("Desconhecidos").astype(str)
 tabela_ia["oponente_num"] = cod_time.transform(tabela_ia["oponente"])
 
-tabela_ia = pd.merge(tabela_ia, df_meta.reset_index().rename(columns = {"index": "champion"}), on = "champion", how = "left").fillna(0)
+tabela_ia = pd.merge(tabela_ia, df_meta, left_on = "champion", right_index = True, how = "left").fillna(0)
 
-tabela_ia["num_picks"] = tabela_ia.groupby("gameid").cumcount()
+# Ordem Picks
 
+mapa_posicao = {
+    (1, 1) : 0, (1, 2) : 3, (1, 3): 4, (1, 4) : 7, (1, 5) : 8, # FP
+    (0, 1) : 1, (0, 2) : 2, (0, 3) : 5, (0, 4) : 6, (0, 5) : 9 # LP
+}
+
+def reconstruir_ordem(tabela_times):
+    colunas = ["gameid", "firstPick", "pick1", "pick2", "pick3", "pick4", "pick5"]
+
+    long = tabela_times[colunas].melt(
+        id_vars = ["gameid", "firstPick"],
+        value_vars = ["pick1", "pick2", "pick3", "pick4", "pick5"],
+        var_name = "pick_slot",
+        value_name = "champion"
+    ).dropna(subset = ["champion", "firstPick"])
+
+    long["pick_slot"] = long["pick_slot"].str.replace("pick", "").astype(int)
+    long["firstPick"] = long["firstPick"].astype(int)
+    long["chave"] = list(zip(long["firstPick"], long["pick_slot"]))
+    long["ordem_pick"] = long["chave"].map(mapa_posicao)
+
+    return long[["gameid", "champion", "ordem_pick"]]
+
+
+ordem_real = reconstruir_ordem(tabela_times)
+
+# Validacões
+
+linha_antes_picks = len(tabela_ia)
+tabela_ia = tabela_ia.merge(ordem_real, on = ["gameid", "champion"], how = "left", indicator = True)
+picks_nao_reconciliados = (tabela_ia["_merge"] == "left_only").sum()
+taxa_perda_picks = picks_nao_reconciliados / linha_antes_picks
+
+print(f"Linhas sem ordem de pick recostruida: {picks_nao_reconciliados} de {linha_antes_picks} ({taxa_perda_picks:.2f})")
+
+if taxa_perda_picks > 0.02:
+    raise ValueError(f"Taxa de perda no merge da ordem real ({taxa_perda_picks}) -> Aceitavel (0.02)")
+
+tabela_ia = tabela_ia[tabela_ia["_merge"] == "both"].drop(columns = ["_merge"])
+tabela_ia["ordem_pick"] = tabela_ia["ordem_pick"].astype(int)
 tabela_ia["peso_final"] = tabela_ia["peso_final"].fillna(1.0)
 
-ordem_picks = tabela_ia.set_index(["gameid", "champion_num"])["num_picks"].to_dict()
+ordem_picks = tabela_ia.set_index(["gameid", "champion_num"])["ordem_pick"].to_dict()
 
 def oculto(linha):
 
-    atual = linha["num_picks"]
+    atual = linha["ordem_pick"]
     gameid = linha["gameid"]
 
     for p in ["p1", "p2", "p3", "p4"]:
@@ -565,16 +599,127 @@ def oculto(linha):
                 linha[o] = -1
 
     return linha
-    
+
+ 
 tabela_ia = tabela_ia.apply(oculto, axis = 1)
+
+# Ordem Bans
+
+mapa_ban = {
+    (1, 1) : 0, (1, 2) : 2, (1, 3) : 4, (1, 4) : 7, (1, 5) : 9, # FP
+    (0, 1): 1, (0, 2): 3, (0, 3) : 5, (0, 4) : 6, (0, 5) : 8 # LP
+}
+
+def reconstruir_ordem_ban(tabela_times):
+    colunas = ["gameid", "firstPick", "ban1", "ban2", "ban3", "ban4", "ban5"]
+
+    long = tabela_times[colunas].melt(
+        id_vars = ["gameid", "firstPick"],
+        value_vars = ["ban1", "ban2", "ban3", "ban4", "ban5"],
+        var_name = "ban_slot",
+        value_name = "champion"
+    ).dropna(subset = ["champion", "firstPick"])
+
+    long["ban_slot"] = long["ban_slot"].str.replace("ban", "").astype(int)
+    long["firstPick"] = long["firstPick"].astype(int)
+    long["chave"] = list(zip(long["firstPick"], long["ban_slot"]))
+    long["ordem_ban"] = long["chave"].map(mapa_ban)
+
+    return long[["gameid", "champion", "ordem_ban"]]
+
+
+df_ordem_bans = reconstruir_ordem_ban(tabela_times)
+
+# Validações
+
+contagem_bans = df_ordem_bans.groupby("gameid").size()
+n_jogos_10_bans = (contagem_bans == 10).sum()
+n_jogos_incompletos = (contagem_bans != 10).sum()
+
+print(f"Jogos com 10 bans completos: ({n_jogos_10_bans}) | Jogos com bans incompletos: {n_jogos_incompletos}") 
+
+gameids_bans_completos = contagem_bans[contagem_bans == 10].index
+df_ordem_bans = df_ordem_bans[df_ordem_bans["gameid"].isin(gameids_bans_completos)]
+
+duplicados = df_ordem_bans.duplicated(subset = ["gameid", "ordem_ban"]).sum()
+
+if duplicados > 0:
+    raise ValueError(f"Duplicidade(s) encontrada(s) gameid + ordem_bans {duplicados}")
+print(f"Duplicados: {duplicados}")
+
+campeoes_desconhecidos = set(df_ordem_bans["champion"]) - set(cod_camp.classes_)
+
+if campeoes_desconhecidos:
+    raise ValueError(f"Não foi encontrado todos os campeões. Os personagens não encontrados fora ({campeoes_desconhecidos})")
+print(f"Campeões não conhecidos: {len(campeoes_desconhecidos)}")
+
+# Bans
+
+df_ordem_bans["champion_num"] = cod_camp.transform(df_ordem_bans["champion"])
+
+pivot_bans = df_ordem_bans.pivot(index = "gameid", columns = "ordem_ban", values = "champion_num")
+pivot_bans.columns = ([f"b{c + 1}" for c in pivot_bans.columns])
+pivot_bans = pivot_bans.reindex(columns = [f"b{i}" for i in range(1, 11)])
+pivot_bans = pivot_bans.reset_index()
+
+# Validações
+
+linha_antes_bans = len(tabela_ia)
+tabela_ia = tabela_ia.merge(pivot_bans, on = "gameid", how = "left", indicator = "_merge_bans")
+bans_nao_reconciliados = (tabela_ia["_merge_bans"] == "left_only").sum()
+taxa_perda_bans = bans_nao_reconciliados / linha_antes_bans
+
+print(f"Linhas de bans não reconstruidas {bans_nao_reconciliados} de {linha_antes_bans} ({taxa_perda_bans:.2f}%)")
+
+if taxa_perda_bans > 0.02:
+    raise ValueError(f"Taxa de perda de {taxa_perda_bans} superior ao limita (0.02)")
+
+tabela_ia = tabela_ia[tabela_ia["_merge_bans"] == "both"].drop(columns = ["_merge_bans"])
+
+for i in range(1, 11):
+    tabela_ia[f"b{i}"] = tabela_ia[f"b{i}"].astype(int)
+
+visibilidade_bans = np.where(tabela_ia["ordem_pick"] < 6, 6, 10)
+
+for i in range(1, 11):
+    ordem_colunas_bans = i - 1
+    tabela_ia[f"b{i}"] = np.where(ordem_colunas_bans < visibilidade_bans, tabela_ia[f"b{i}"], -1)
+
+def audita_visibilidade_bans(df_ia, limiar):
+    total_vazamentos = 0
+
+    for i in range(1, 11):
+        ordem_colunas_bans = i -1
+        mascara_vazamento = (df_ia[f"b{i}"] != -1) & (ordem_colunas_bans >= limiar)
+        n = mascara_vazamento.sum()
+
+        if n > 0:
+            print(f"Vazamento em b{i}: {n} casos")
+            total_vazamentos += n
+
+    if total_vazamentos > 0:
+        raise ValueError(f"Foram encontrados {total_vazamentos} vazamentos nos bans.")
+    
+    print(f"Total de vazamentos encontrado nos bans: {total_vazamentos}")
+
+
+audita_visibilidade_bans(tabela_ia, visibilidade_bans)
+
+print("\nConferencia na ordem na ordem de pick/ban: ")
+
+colunas_ban = [f"b{i}" for i in range(1, 11)]
+
+print(tabela_ia[["gameid", "ordem_pick"] + colunas_ban].sample(10, random_state = 1).sort_values(["gameid", "ordem_pick"]))
 
 # Treino IA
 
 colunas_treino = [
     "teamname_num", "oponente_num", "position_num", "firstPick",
-    "num_picks", "patch_num",
+    "ordem_pick", "patch_num",
     "p1", "p2", "p3", "p4",
-    "o1", "o2", "o3", "o4", "o5"
+    "o1", "o2", "o3", "o4", "o5",
+    "b1", "b2", "b3", "b4", "b5",
+    "b6", "b7", "b8", "b9", "b10"
 ]
 
 X = tabela_ia[colunas_treino]
@@ -590,7 +735,7 @@ modelo_ia = RandomForestClassifier(
 
 modelo_ia.fit(X, y, sample_weight = tabela_ia["peso_final"].values)
 
-print(f"IA treinada com sucesso! Liga ativa {liga_ativa} | Linhas de treino: {len(tabela_ml)}")
+print(f"IA treinada com sucesso! Liga ativa {liga_ativa} | Linhas de treino: {len(tabela_ia)}")
 
 # %%
 prioridade_historica = tabela_liga_ativa.groupby(["teamname", "champion"]).size().unstack(fill_value = 0)
@@ -857,6 +1002,43 @@ def get_forca_counter(camp, meu_pick):
     return min((winrate - threshold) / (1.0 -threshold), 1.0)
 
 
+def preparar_bans(bansTime1, bansTime2, time_tem_p1_no_jogo):
+
+    bans_time1 = list(bansTime1)
+    bans_time2 = list(bansTime2)
+
+    if time_tem_p1_no_jogo:
+        bans_fp = bans_time1
+        bans_lp = bans_time2
+    else:
+        bans_fp = bans_time2
+        bans_lp = bans_time1
+
+    ordem_banimentos = []
+
+    for i in range(3):
+        if i < len(bans_fp):
+            ordem_banimentos.append(bans_fp[i])
+        if i < len(bans_lp):
+            ordem_banimentos.append(bans_lp[i])
+
+    for i in range(3, 5):
+        if i < len(bans_lp):
+            ordem_banimentos.append(bans_lp[i])
+        if i < len(bans_fp):
+            ordem_banimentos.append(bans_fp[i])
+
+    if len(ordem_banimentos) > 0:
+        num_bans = cod_camp.transform(ordem_banimentos).tolist()
+    else:
+        num_bans = []
+
+    while len(num_bans) < 10:
+        num_bans.append(-1)
+
+    return num_bans[:10]
+
+
 def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, picks_totais, time_tem_p1_no_jogo, retornar_lista = False):
 
     from random import choices
@@ -897,6 +1079,7 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
         picks_time2_nums.append(-1)
 
     n_picks_feitos = len(picksTime1) + len(picksTime2)
+    num_bans = preparar_bans(bansTime1, bansTime2, time_tem_p1_no_jogo)
 
     t = min(n_picks_feitos / 9.0, 1.0)
 
@@ -918,11 +1101,13 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
         cenario = pd.DataFrame([[
             id_time, id_opp, id_rota, valor_posse_p1,
             n_picks_feitos, patch_atual,
-            *picks_time1_nums, *picks_time2_nums
+            *picks_time1_nums, *picks_time2_nums,
+            *num_bans
         ]], columns = colunas_treino)
 
         probs = modelo_ia.predict_proba(cenario)[0]
-        raking_ia = pd.Series(probs, index = cod_camp.classes_)
+        campeoes_modelo = cod_camp.inverse_transform(modelo_ia.classes_)
+        raking_ia = pd.Series(probs, index = campeoes_modelo)
 
         for camp in cod_camp.classes_:
 
@@ -1086,7 +1271,7 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
                     bonus_counter = bonus_counter_bruto * fator_pool
 
                 score = (
-                    (prio_hist * peso_hist) + (prio_ia * peso_ia) + (bonus_sinergia * peso_sinergia) + 
+                    (prio_hist * peso_hist) + (prio_ia * peso_ia) + (bonus_sinergia * peso_sinergia) +
                     (bonus_counter * peso_counter) + (bonus_oportunidade * peso_oportunidade)
                 )
 
@@ -1185,6 +1370,7 @@ def sugeriBans(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, picks
             score_counter[camp] = min(forca_total / len(picksTime1), 0.25)
 
     n_picks_feitos = len(picksTime2) + len(picksTime1)
+    num_bans = preparar_bans(bansTime1, bansTime2, time_tem_p1_no_jogo)
     
     melhor_ban = None
     maior_perigo = -1
@@ -1195,11 +1381,13 @@ def sugeriBans(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, picks
         cenario_inimigo = pd.DataFrame([[
             id_inimigo, id_aliado, id_rota, posse_p1_adv,
             n_picks_feitos, patch_atual,
-            *picks_time2_nums, *picks_time1_nums
+            *picks_time2_nums, *picks_time1_nums,
+            *num_bans
         ]], columns = colunas_treino)
 
         probs = modelo_ia.predict_proba(cenario_inimigo)[0]
-        ranking_inimigo = pd.Series(probs, index = cod_camp.classes_)
+        campeoes_modelo = cod_camp.inverse_transform(modelo_ia.classes_)
+        ranking_inimigo = pd.Series(probs, index = campeoes_modelo)
 
         for camp in cod_camp.classes_:
 
@@ -1356,8 +1544,8 @@ times_liga_ativa = tabela_liga_ativa["teamname"].unique()
 print(times_liga_ativa)
 
 # %%
-time1 = "RED Canids"
-time2 = "LOUD"
+time1 = "FURIA"
+time2 = "RED Canids"
 
 historico_fearless = []
 
