@@ -428,6 +428,31 @@ patch_max = tabela_final["patch_rank"].max()
 tabela_final["patch_peso"] = np.exp(- 0.05 * (patch_max - tabela_final["patch_rank"]))
 
 # %%
+def treinar_modelo(liga_ativa):
+    
+    from sklearn.ensemble import RandomForestClassifier
+
+    peso_liga = tabela_ia["league_unificada"].map(pesos_base_liga).fillna(0.5)
+
+    if liga_ativa is not None:
+        filtro_liga = tabela_ia["league_unificada"] == liga_ativa
+        peso_liga.loc[filtro_liga] *= bonus_liga_ativa
+
+    peso_final = peso_liga * tabela_ia["patch_peso"]
+
+    modelo = RandomForestClassifier(
+        n_estimators = 150,
+        min_samples_leaf = 12,
+        max_depth = 20,
+        max_leaf_nodes = 3000,
+        random_state = 42
+    )
+
+    modelo.fit(X, y, sample_weight = peso_final.values)
+
+    return modelo
+
+# %%
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 
@@ -1039,11 +1064,17 @@ def preparar_bans(bansTime1, bansTime2, time_tem_p1_no_jogo):
     return num_bans[:10]
 
 
-def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, picks_totais, time_tem_p1_no_jogo, retornar_lista = False):
+def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, picks_totais, time_tem_p1_no_jogo, retornar_lista = False, modelo = None):
 
     from random import choices
 
     global prioridade_historica, prioridade_p1, ban_contra_fp, ban_contra_lp, total_contra_fp, total_contra_lp
+
+    if modelo is not None:
+        modelo_usado = modelo
+    else:
+        modelo_usado = modelo_ia
+
     proibidos = list(bansTime1) + list(bansTime2) + list(picks_totais)
 
     rotas_ocupadas = get_posicoes_ocupadas(picksTime1, dna_campeoes)
@@ -1105,8 +1136,8 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
             *num_bans
         ]], columns = colunas_treino)
 
-        probs = modelo_ia.predict_proba(cenario)[0]
-        campeoes_modelo = cod_camp.inverse_transform(modelo_ia.classes_)
+        probs = modelo_usado.predict_proba(cenario)[0]
+        campeoes_modelo = cod_camp.inverse_transform(modelo_usado.classes_)
         raking_ia = pd.Series(probs, index = campeoes_modelo)
 
         for camp in cod_camp.classes_:
@@ -1301,8 +1332,14 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
     return "Fallback"
     
          
-def sugeriBans(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, picks, time_tem_p1_no_jogo):
+def sugeriBans(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, picks, time_tem_p1_no_jogo, modelo = None):
+
     global prioridade_historica, ban_fase1_fp, ban_fase1_lp, total_fp, total_lp, ban_contra_fp, ban_contra_lp, total_contra_fp, total_contra_lp
+
+    if modelo is not None:
+        modelo_usado = modelo
+    else:
+        modelo_usado = modelo_ia
 
     proibidos = list(bansTime1 + bansTime2 + picks)
 
@@ -1385,8 +1422,8 @@ def sugeriBans(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, picks
             *num_bans
         ]], columns = colunas_treino)
 
-        probs = modelo_ia.predict_proba(cenario_inimigo)[0]
-        campeoes_modelo = cod_camp.inverse_transform(modelo_ia.classes_)
+        probs = modelo_usado.predict_proba(cenario_inimigo)[0]
+        campeoes_modelo = cod_camp.inverse_transform(modelo_usado.classes_)
         ranking_inimigo = pd.Series(probs, index = campeoes_modelo)
 
         for camp in cod_camp.classes_:

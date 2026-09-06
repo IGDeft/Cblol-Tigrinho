@@ -14,7 +14,7 @@ def buscar_modelos(liga : str = "GERAL"):
         raise ValueError(f'Liga: "{liga}" não encontrada. Opções disponíveis: {ligas_treinadas}')
 
     if liga in _cache_modelos:
-        print(f'Enviando "{liga}" em cache...')
+        print(f'\nEnviando "{liga}" em cache...')
 
         return _cache_modelos[liga]
 

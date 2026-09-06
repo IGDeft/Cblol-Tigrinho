@@ -3,6 +3,7 @@ from draft import Fase, proxima_fase
 import uvicorn 
 import cblol
 import uuid
+import modelos_cache
 
 # RETIRAR
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,10 +21,19 @@ app.add_middleware(
 
 sessions = {}
 
+def obter_modelo_sessao(state):
+
+    try:
+        return modelos_cache.buscar_modelos(state.get("liga"))
+    except(ValueError, FileNotFoundError) as error:
+        raise HTTPException(status_code = 400, detail = str(error))
+
+
 # GET
 @app.get("/")
 def home():
     return {"status": "Python API is running"}
+
 
 if __name__ == "__main__":
     uvicorn.run("api:app", host="0.0.0.0", port=5000, reload=False)
@@ -33,6 +43,11 @@ if __name__ == "__main__":
 def listar_ligas():
     response = cblol.listar_todas_ligas()
     return {"ligas": response}
+
+
+@app.get("/ligas/disponiveis")
+def listar_ligas_disponiveis():
+    return {"ligas": sorted(modelos_cache.ligas_treinadas)}
 
 
 @app.get("/times")
@@ -45,9 +60,11 @@ def listar_times(
         
     return cblol.obter_times_liga(ligas, year)
 
+
 @app.get("/campeoes")
 def listar_campeoes():
     return cblol.obter_campeoes()
+
 
 @app.get("/stats/draft")
 def bans_analise(nome: str = Query(...), ano: int = Query(None)):
@@ -56,6 +73,7 @@ def bans_analise(nome: str = Query(...), ano: int = Query(None)):
     if resultado is None:
         raise HTTPException(status_code = 404, detail = f"Time {nome} não encontrado")
     return resultado
+
 
 @app.get("/acessar-sessao")
 def acessar_jogo(sessionId: str = Query(...)):
@@ -70,7 +88,9 @@ def acessar_jogo(sessionId: str = Query(...)):
         "fearless": state["fearless"]
     }    
 
+
 # POST
+
 @app.post("/predict")
 def predict(data: dict = Body(...)):
     time_a = data.get("timeA")
@@ -80,6 +100,7 @@ def predict(data: dict = Body(...)):
     response = cblol.ordemPicksBans(time_a, time_b, jogos, [])
 
     return {"draft": response}
+
 
 @app.post("/draft/iniciar")
 def iniciar_draft(data: dict = Body(...)):
@@ -95,6 +116,7 @@ def iniciar_draft(data: dict = Body(...)):
         "is_first_pick": data["isFirstPick"],
         "time_user": data["timeUsuario"],
         "time_ia": data["timeIA"],
+        "liga" : data.get("liga", "CBLOL"),
         "game_atual": 1,
         "fase_atual": Fase.BAN_1.value,
         "jogador_atual": jogador_atual,
@@ -104,11 +126,14 @@ def iniciar_draft(data: dict = Body(...)):
     }
     return {"sessionId": session_id, "faseAtual": Fase.BAN_1.value, "jogadorAtual": jogador_atual}
 
+
 @app.post("/draft/acao")
 def acao_draft(data: dict = Body(...)):
     if data["sessionId"] not in sessions:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    
     state = sessions[data["sessionId"]]
+    modelo = obter_modelo_sessao(state)
     
     if data.get("champion"):
         champion = data["champion"]
@@ -136,10 +161,10 @@ def acao_draft(data: dict = Body(...)):
                  state["time_user"], state["bans"]["player"], state["picks"]["player"],state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["fearless"], not state["is_first_pick"]
                 )
             if is_ban:
-                champion = cblol.sugeriBans(*args)
+                champion = cblol.sugeriBans(*args, modelo = modelo)
                 state["bans"]["player"].append(champion)
             else:
-                champion = cblol.sugeriPicks(*args)
+                champion = cblol.sugeriPicks(*args, modelo = modelo)
                 state["picks"]["player"].append(champion)
                 state["fearless"].append(champion)
     else:
@@ -150,9 +175,9 @@ def acao_draft(data: dict = Body(...)):
                 state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["time_user"], state["bans"]["player"], state["picks"]["player"], state["fearless"], not state["is_first_pick"]
                 )
             if is_ban:
-                champion = cblol.sugeriBans(*args)
+                champion = cblol.sugeriBans(*args, modelo = modelo)
             else:
-                champion = cblol.sugeriPicks(*args)
+                champion = cblol.sugeriPicks(*args, modelo = modelo)
         if is_ban:
             state["bans"]["ia"].append(champion)
         else:
@@ -179,6 +204,7 @@ def acao_draft(data: dict = Body(...)):
         "fearless": state["fearless"],
         "temMaisJogos": tem_mais_jogos
     }    
+
 
 @app.post("/draft/novo-jogo")
 def novo_jogo(data: dict = Body(...)):
@@ -210,16 +236,20 @@ def novo_jogo(data: dict = Body(...)):
         "jogadorAtual": state["jogador_atual"]
     }
 
+
 @app.get("/draft/sugestao")
 def pedir_sugestao(sessionId: str = Query(...)):
     if sessionId not in sessions:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    
     state = sessions[sessionId]
+    modelo = obter_modelo_sessao(state)
+
     args = ( state["time_user"], state["bans"]["player"], state["picks"]["player"], state["time_ia"], state["bans"]["ia"], state["picks"]["ia"], state["fearless"], not state["is_first_pick"])
     if state["fase_atual"].startswith("BAN") :
-        champion = cblol.sugeriBans(*args)
+        champion = cblol.sugeriBans(*args, modelo = modelo)
     else:
-        champion = cblol.sugeriPicks(*args, True)
+        champion = cblol.sugeriPicks(*args, True, modelo = modelo)
     return{
         "champion": champion
     }

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +18,7 @@ import com.lol.draft_lol.DTO.DraftRequestDto;
 import com.lol.draft_lol.DTO.DraftStartDto;
 import com.lol.draft_lol.DTO.DraftSugestaoDto;
 import com.lol.draft_lol.client.PythonDraftClient;
+import com.lol.draft_lol.exception.AcaoEmAndamentoException;
 import com.lol.draft_lol.service.ChampionService;
 import com.lol.draft_lol.service.DraftService;
 import com.lol.draft_lol.service.TimeService;
@@ -95,9 +97,15 @@ public class DraftController {
   }
 
   @PostMapping("/draft/Picks-Bans")
-  public Object alterarDraft(@RequestBody @Valid DraftAcaoDto request){
-    Object draftAlterado = draftService.alterarDraft(request);
-    return ResponseEntity.ok(draftAlterado);
+  public ResponseEntity<Object> alterarDraft(@RequestBody @Valid DraftAcaoDto request){
+    try{
+      Object draftAlterado = draftService.alterarDraft(request);
+      return ResponseEntity.ok(draftAlterado);
+    }catch(AcaoEmAndamentoException e){
+      return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(e.getMessage());
+    } catch(IllegalArgumentException e){
+      return ResponseEntity.badRequest().body(e.getMessage());
+    }
   }
 
   @PostMapping("/draft/Prox-jogo")

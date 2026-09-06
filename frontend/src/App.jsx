@@ -17,6 +17,7 @@ function App() {
   const [sugestaoIA, setSugestaoIA] = useState([]);
   const [dadosDraftJava, setDadosDraftJava] = useState(null);
   const [jogadorAtual, setJogadorAtual] = useState('PLAYER');
+  const [buscarChamp, setBuscarChamp] = useState('');
 
   useEffect(() => {
   if (draftService.getSessionId()) {
@@ -54,7 +55,6 @@ const obterSugestao = async () => {
 
   const [champions, setChampions] = useState([])
 
-
   useEffect(() => {
     const carregarCampeoes = async () => {
       try {
@@ -67,6 +67,7 @@ const obterSugestao = async () => {
     carregarCampeoes()
   }, [])
 
+  const champsFiltrados = champions.filter((champ) => champ.name.toLowerCase().includes(buscarChamp.toLowerCase()));
   const [times, setTimes] = useState([])
 
   useEffect(() => {
@@ -316,6 +317,8 @@ const obterSugestao = async () => {
         <h2>Picks e Bans</h2>
         <header className='search-header'>
           <input 
+          value={buscarChamp}
+          onChange={(e) => setBuscarChamp(e.target.value)}
           type="text" 
           placeholder='Pesquisar campeao...' 
           />
@@ -353,7 +356,7 @@ const obterSugestao = async () => {
 
         <p>lista de champs</p>
         <div className='champions-grid'>
-          {champions.map((champion) => {
+          {champsFiltrados.map((champion) => {
             const foiConfirmado = champsBloqueados.includes(champion.name)
             let estaSelecionadoAgora = selecaoTemporaria?.name === champion.name
             const isSugestaoIA = sugestaoIA.includes(champion.name)
