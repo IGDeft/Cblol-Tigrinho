@@ -1,5 +1,8 @@
 package com.lol.draft_lol.service;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -8,6 +11,7 @@ import com.lol.draft_lol.DTO.DraftProxJogoDto;
 import com.lol.draft_lol.DTO.DraftRequestDto;
 import com.lol.draft_lol.DTO.DraftStartDto;
 import com.lol.draft_lol.client.PythonDraftClient;
+import com.lol.draft_lol.exception.AcaoEmAndamentoException;
 
 import feign.FeignException;
 
@@ -20,6 +24,8 @@ public class DraftService {
   private TimeService timeService;
   @Autowired
   private ChampionService championService;
+
+  private final Map<String, Boolean> sessoesOcupadas = new ConcurrentHashMap<>();
 
   public Object gerarDraft(DraftRequestDto dados){
     if (!timeService.existe(dados.timeA())) {
@@ -58,20 +64,28 @@ public class DraftService {
   }
 
   public Object alterarDraft(DraftAcaoDto dados){
-    DraftAcaoDto dadosParaEnviar = dados;
-    if(dados.champion() != null){
-      if(!championService.existe(dados.champion())){
-        throw new IllegalArgumentException("Campeão não encontrado: " + dados.champion());
-      }
+    String sessionId = dados.sessionId();
+    if (sessoesOcupadas.putIfAbsent(sessionId, true) != null) {
+      throw new AcaoEmAndamentoException("Ação já em andamento para essa sessão");
+    }
+    try{
+      DraftAcaoDto dadosParaEnviar = dados;
+      if(dados.champion() != null){
+        if(!championService.existe(dados.champion())){
+          throw new IllegalArgumentException("Campeão não encontrado: " + dados.champion());
+        }
       String campeao = championService.normalizar(dados.champion());
       dadosParaEnviar = new DraftAcaoDto(dados.sessionId(), campeao);
-    }
+      }
 
     try {
         return pythonClient.alterarDraft(dados);
     } catch (FeignException.NotFound e) {
       throw new IllegalArgumentException("Sessão não encontrada");
     }
+  } finally{
+    sessoesOcupadas.remove(sessionId);
+  }
   }
 
   public Object proxJogo(DraftProxJogoDto dados){
