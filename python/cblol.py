@@ -138,62 +138,70 @@ def filtar_dados(liga = None, year = None):
 
     return df_meta_liga
 
+
 print("Quantida de jogos por liga.")
 jogos_por_liga = tabela_final.groupby("league")["gameid"].nunique()
 
 print(jogos_por_liga.sort_values(ascending = False))
 
-
 # %%
 tabela_liga_ativa = filtar_dados(liga = "CBLOL", year = 2026)
 
-tabela_players_ativo = tabela_liga_ativa[tabela_liga_ativa["position"] != "team"]
-tabela_team_ativo = tabela_liga_ativa[tabela_liga_ativa["position"] == "team"]
+def construir_df_meta(tabela_liga = None):
 
-# Picks
+    if tabela_liga is None:
+        tabela_liga = tabela_liga_ativa
 
-champion_global = tabela_players_ativo["champion"].value_counts()
-print(champion_global.head(40))
+    tabela_players_ativo = tabela_liga[tabela_liga["position"] != "team"]
+    tabela_team_ativo = tabela_liga[tabela_liga["position"] == "team"]
 
-# Bans
+    # Picks
 
-bans_global = pd.concat([
-    tabela_team_ativo["ban1"],
-    tabela_team_ativo['ban2'],
-    tabela_team_ativo['ban3'],
-    tabela_team_ativo['ban4'],
-    tabela_team_ativo['ban5']
-])
-print("-" * 20)
-print("Bans")
+    picks_liga = tabela_players_ativo["champion"].value_counts()
+    print(picks_liga.head(40))
 
-print(bans_global.value_counts().head(20))
+    # Bans
 
-# Pick Rate
+    bans_liga = pd.concat([
+        tabela_team_ativo["ban1"],
+        tabela_team_ativo['ban2'],
+        tabela_team_ativo['ban3'],
+        tabela_team_ativo['ban4'],
+        tabela_team_ativo['ban5']
+    ])
 
-total_jogos = tabela_team_ativo['gameid'].nunique()
-pick_rate = (champion_global / total_jogos) * 100
+    print("-" * 20)
+    print("\nBans\n")
 
-print("-" * 20)
-print("Pick Rate")
+    print(bans_liga.value_counts().head(20))
 
-print(pick_rate.head(20).round(2))
+    total_jogos = tabela_team_ativo['gameid'].nunique()
 
-ban_rate = (bans_global.value_counts()/ total_jogos) * 100
+    pick_rate = (picks_liga / total_jogos) * 100
+    ban_rate = (bans_liga.value_counts()/ total_jogos) * 100
 
-print("-" * 20)
-print("Ban Rate")
-print(ban_rate.head(20).round(2))
+    print("-" * 20)
+    print("\nPick Rate\n")
+    print(pick_rate.head(20).round(2))
 
-# %%
-df_meta = pd.DataFrame({
-    "pick_rate": pick_rate,
-    "ban_rate": ban_rate
-}).fillna(0)
+    print("-" * 20)
+    print("\nBan Rate\n")
+    print(ban_rate.head(20).round(2))
 
-df_meta['presence'] = df_meta["pick_rate"] + df_meta["ban_rate"]
-df_meta = df_meta.sort_values(by = "presence", ascending = False)
-print(df_meta.head(50).round(2))
+    df_meta_resultado = pd.DataFrame({
+        "pick_rate" : pick_rate,
+        "ban_rate" : ban_rate
+    }).fillna(0)
+
+    df_meta_resultado['presence'] = df_meta_resultado["pick_rate"] + df_meta_resultado["ban_rate"]
+    df_meta_resultado = df_meta_resultado.sort_values(by = "presence", ascending = False)
+
+    print("\n", df_meta_resultado.head(50).round(2))
+
+    return df_meta_resultado
+
+
+df_meta = construir_df_meta(tabela_liga_ativa)
 
 # %%
 def analisar_estrategias(nome_time, ano_analise = None):
@@ -397,29 +405,6 @@ def analisar_time_adv(nome_time, ano_analise = None):
 
 
 # %%
-mapa_dna = tabela_liga_ativa[tabela_liga_ativa["position"] != "team"].set_index(["gameid", "teamname", "champion"])["position"].to_dict()
-
-df_agrupados = tabela_liga_ativa.groupby([
-    "gameid", "teamname", "result", "firstPick", "game",
-    "ban1", "ban2", "ban3", "pick1", "pick2",
-    "pick3", "ban4", "ban5", "pick4", "pick5",
-]).size().reset_index() 
-
-df_confronto = pd.merge(df_agrupados, df_agrupados, on = ["gameid", "game"], suffixes = ("_time1", "_time2"))
-df_confronto = df_confronto[df_confronto["teamname_time1"] != df_confronto["teamname_time2"]]
-df_confronto = df_confronto.drop_duplicates(subset = ["gameid"], keep = "first")
-
-for i in range(1, 6):
-    for t in ["time1", "time2"]:
-        p_col = f"pick{i}_{t}"
-        r_col = f"rota_p{i}_{t}"
-        df_confronto[r_col] = df_confronto.apply(
-            lambda row: mapa_dna.get((row["gameid"], row[f"teamname_{t}"], row[p_col]), "desconhecido"), axis = 1
-        )
-
-#display(df_confronto)
-
-# %%
 import numpy as np
 
 tabela_final["patch_rank"] = tabela_final["patch_num"].rank(method = "dense")
@@ -587,7 +572,7 @@ tabela_ia = tabela_ia.merge(ordem_real, on = ["gameid", "champion"], how = "left
 picks_nao_reconciliados = (tabela_ia["_merge"] == "left_only").sum()
 taxa_perda_picks = picks_nao_reconciliados / linha_antes_picks
 
-print(f"Linhas sem ordem de pick recostruida: {picks_nao_reconciliados} de {linha_antes_picks} ({taxa_perda_picks:.2f})")
+print(f"\nLinhas sem ordem de pick recostruida: {picks_nao_reconciliados} de {linha_antes_picks} ({taxa_perda_picks:.2f})")
 
 if taxa_perda_picks > 0.02:
     raise ValueError(f"Taxa de perda no merge da ordem real ({taxa_perda_picks}) -> Aceitavel (0.02)")
@@ -750,21 +735,56 @@ colunas_treino = [
 X = tabela_ia[colunas_treino]
 y = tabela_ia["champion_num"]
 
-modelo_ia = RandomForestClassifier(
-    n_estimators = 150,
-    min_samples_leaf = 12,
-    max_depth = 20,
-    max_leaf_nodes = 3000,
-    random_state = 42
-)
+# modelo_ia = RandomForestClassifier(
+#     n_estimators = 150,
+#     min_samples_leaf = 12,
+#     max_depth = 20,
+#     max_leaf_nodes = 3000,
+#     random_state = 42
+# )
 
-modelo_ia.fit(X, y, sample_weight = tabela_ia["peso_final"].values)
+# modelo_ia.fit(X, y, sample_weight = tabela_ia["peso_final"].values)
 
 print(f"IA treinada com sucesso! Liga ativa {liga_ativa} | Linhas de treino: {len(tabela_ia)}")
 
 # %%
+import os
+import joblib
+
+try:
+    pasta_raiz = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    pasta_raiz = os.getcwd()
+
+caminho_encoders = os.path.join(pasta_raiz, "modelos_treinados", "encoders.joblib")
+
+if os.path.exists(caminho_encoders):
+    encoders_salvo = joblib.load(caminho_encoders)
+
+    classes_atuais = set(cod_camp.classes_)
+    classes_salvas = set(encoders_salvo["cod_camp"].classes_)
+
+    if classes_atuais != classes_salvas:
+        print(f'\n\033[33mAVISO: Os campeões do CSV mudaram! Rode o "treino_ia.py" novamente para atualizar os modelos.\033[m')
+        print("Diferença encontrada: ", classes_atuais.symmetric_difference(classes_salvas))
+
+# %%
 prioridade_historica = tabela_liga_ativa.groupby(["teamname", "champion"]).size().unstack(fill_value = 0)
 prioridade_historica = prioridade_historica.div(prioridade_historica.sum(axis = 1), axis = 0).fillna(0)
+
+# Historico
+
+df_agrupados = tabela_liga_ativa.groupby([
+    "gameid", "teamname", "result", "firstPick", "game",
+    "ban1", "ban2", "ban3", "pick1", "pick2",
+    "pick3", "ban4", "ban5", "pick4", "pick5",
+]).size().reset_index() 
+
+df_confronto = pd.merge(df_agrupados, df_agrupados, on = ["gameid", "game"], suffixes = ("_time1", "_time2"))
+df_confronto = df_confronto[df_confronto["teamname_time1"] != df_confronto["teamname_time2"]]
+df_confronto = df_confronto.drop_duplicates(subset = ["gameid"], keep = "first")
+
+#display(df_confronto)
 
 # Prioridade FP
 
@@ -855,97 +875,141 @@ for gameid, jogo_equipe in tabela_times_liga.groupby("gameid"):
 
 
 # %%
-import itertools
+caminho_dados_draft = os.path.join(pasta_raiz, "modelos_treinados", "dados_draft.joblib")
 
-dados_players_global = tabela_final[tabela_final["position"] != "team"]
-tabela_times_global = tabela_final[tabela_final["position"] == "team"]
+if os.path.exists(caminho_dados_draft):
+    print('\nCarregando "dados_draft.joblib" do disco...')
 
-contagem_pares = {}
-contagem_exposicao = {}
-contagem_respostas = {}
+    dados_draft = joblib.load(caminho_dados_draft)
 
-for (gameid, teamname), grupo in dados_players_global.groupby(["gameid", "teamname"]):
-    champ = grupo["champion"].tolist()
+else:
+    print(f'"dados_draft.joblib" não foi encontrado no disco. Calculando dados do draft...')
 
-    for i in range(len(champ)):
-        for j in range(i + 1, len(champ)):
-            par = tuple(sorted([champ[i], champ[j]]))
-            contagem_pares[par] = contagem_pares.get(par, 0) + 1
+    import itertools
 
-for gameid, jogo in dados_players_global.groupby("gameid"):
-    times = jogo["teamname"].unique()
+    dados_players_global = tabela_final[tabela_final["position"] != "team"]
+    tabela_times_global = tabela_final[tabela_final["position"] == "team"]
 
-    if len(times) != 2:
-        continue
+    contagem_pares = {}
+    contagem_exposicao = {}
+    contagem_respostas = {}
 
-    camp_t1 = jogo[jogo["teamname"] == times[0]]["champion"].tolist()
-    camp_t2 = jogo[jogo["teamname"] == times[1]]["champion"].tolist()
+    for (gameid, teamname), grupo in dados_players_global.groupby(["gameid", "teamname"]):
+        champ = grupo["champion"].tolist()
 
-    for picks_inimigo, picks_aliado in ([camp_t1, camp_t2], [camp_t2, camp_t1]):
+        for i in range(len(champ)):
+            for j in range(i + 1, len(champ)):
+                par = tuple(sorted([champ[i], champ[j]]))
+                contagem_pares[par] = contagem_pares.get(par, 0) + 1
 
-        for inimigo in picks_inimigo:
-            contagem_exposicao[inimigo] = contagem_exposicao.get(inimigo, 0) + 1
+    for gameid, jogo in dados_players_global.groupby("gameid"):
+        times = jogo["teamname"].unique()
 
-            for resposta in picks_aliado:
-                par = (inimigo, resposta)
-                contagem_respostas[par] = contagem_respostas.get(par, 0) + 1
-    
-ban_fase2_por_pick = {}
-total_pick_fase2 = {}
+        if len(times) != 2:
+            continue
 
-picks_por_time = dados_players_global.groupby(["gameid", "teamname"])["champion"].apply(list).to_dict()
+        camp_t1 = jogo[jogo["teamname"] == times[0]]["champion"].tolist()
+        camp_t2 = jogo[jogo["teamname"] == times[1]]["champion"].tolist()
 
-for gameid, jogo_team in tabela_times_global.groupby("gameid"):
-    times = jogo_team["teamname"].unique()
+        for picks_inimigo, picks_aliado in ([camp_t1, camp_t2], [camp_t2, camp_t1]):
 
-    if len(times) != 2:
-        continue
+            for inimigo in picks_inimigo:
+                contagem_exposicao[inimigo] = contagem_exposicao.get(inimigo, 0) + 1
 
-    for time in times:
-        picks_time = picks_por_time.get((gameid, time), [])
-        ban_fase2 = jogo_team[jogo_team["teamname"] == time][["ban4", "ban5"]].values.flatten().tolist()
+                for resposta in picks_aliado:
+                    par = (inimigo, resposta)
+                    contagem_respostas[par] = contagem_respostas.get(par, 0) + 1
+        
+    ban_fase2_por_pick = {}
+    total_pick_fase2 = {}
 
-        for pick in picks_time:
-            total_pick_fase2[pick] = total_pick_fase2.get(pick, 0) + 1
+    picks_por_time = dados_players_global.groupby(["gameid", "teamname"])["champion"].apply(list).to_dict()
 
-            for ban in ban_fase2:
-                
-                if pd.notna(ban):
-                    ban_fase2_por_pick[(pick, ban)] = ban_fase2_por_pick.get((pick, ban), 0) + 1
+    for gameid, jogo_team in tabela_times_global.groupby("gameid"):
+        times = jogo_team["teamname"].unique()
 
-matchup_vitorias = {}
-matchup_total = {}
+        if len(times) != 2:
+            continue
 
-for game, jogo in dados_players_global.groupby("gameid"):
-    times = jogo["teamname"].unique()
+        for time in times:
+            picks_time = picks_por_time.get((gameid, time), [])
+            ban_fase2 = jogo_team[jogo_team["teamname"] == time][["ban4", "ban5"]].values.flatten().tolist()
 
-    if len(times) != 2:
-        continue
+            for pick in picks_time:
+                total_pick_fase2[pick] = total_pick_fase2.get(pick, 0) + 1
 
-    time_a, time_b = times[0], times[1]
-    camp_a = jogo[jogo["teamname"] == time_a]
-    camp_b = jogo[jogo["teamname"] == time_b]
+                for ban in ban_fase2:
+                    
+                    if pd.notna(ban):
+                        ban_fase2_por_pick[(pick, ban)] = ban_fase2_por_pick.get((pick, ban), 0) + 1
 
-    if camp_a.empty or camp_b.empty:
-        continue
+    matchup_vitorias = {}
+    matchup_total = {}
 
-    champs_a = camp_a["champion"].tolist()
-    champs_b = camp_b["champion"].tolist()
-    result_a = camp_a["result"].iloc[0]
+    for game, jogo in dados_players_global.groupby("gameid"):
+        times = jogo["teamname"].unique()
 
-    for nome_a, nome_b in itertools.product(champs_a, champs_b):
-        par_ab = (nome_a, nome_b)
-        par_ba = (nome_b, nome_a)
+        if len(times) != 2:
+            continue
 
-        matchup_total[par_ab] = matchup_total.get(par_ab, 0) + 1
-        matchup_total[par_ba] = matchup_total.get(par_ba, 0) + 1
+        time_a, time_b = times[0], times[1]
+        camp_a = jogo[jogo["teamname"] == time_a]
+        camp_b = jogo[jogo["teamname"] == time_b]
 
-        if result_a == 1:
-            matchup_vitorias[par_ab] = matchup_vitorias.get(par_ab, 0) + 1
-        else:
-            matchup_vitorias[par_ba] = matchup_vitorias.get(par_ba, 0) + 1
+        if camp_a.empty or camp_b.empty:
+            continue
+
+        champs_a = camp_a["champion"].tolist()
+        champs_b = camp_b["champion"].tolist()
+        result_a = camp_a["result"].iloc[0]
+
+        for nome_a, nome_b in itertools.product(champs_a, champs_b):
+            par_ab = (nome_a, nome_b)
+            par_ba = (nome_b, nome_a)
+
+            matchup_total[par_ab] = matchup_total.get(par_ab, 0) + 1
+            matchup_total[par_ba] = matchup_total.get(par_ba, 0) + 1
+
+            if result_a == 1:
+                matchup_vitorias[par_ab] = matchup_vitorias.get(par_ab, 0) + 1
+            else:
+                matchup_vitorias[par_ba] = matchup_vitorias.get(par_ba, 0) + 1
+
+    dados_draft = {
+        "contagem_pares" : contagem_pares,
+        "contagem_exposicao" : contagem_exposicao,
+        "contagem_respostas" : contagem_respostas,
+        "ban_fase2_por_pick" : ban_fase2_por_pick,
+        "total_pick_fase2" : total_pick_fase2,
+        "matchup_total" : matchup_total,
+        "matchup_vitorias" : matchup_vitorias
+    }
+
+    joblib.dump(dados_draft, caminho_dados_draft)
+
+    teste_dados_draft = joblib.load(caminho_dados_draft)
+
+    assert(teste_dados_draft["contagem_pares"] == contagem_pares), 'Diferença em: "contagem_pares".'
+    assert(teste_dados_draft["contagem_exposicao"] == contagem_exposicao), 'Diferença em: "contagem_exposicao".'
+    assert(teste_dados_draft["contagem_respostas"] == contagem_respostas), 'Diferença em: "contagem_respostas".'
+    assert(teste_dados_draft["ban_fase2_por_pick"] == ban_fase2_por_pick), 'Diferença em: "ban_fase2_por_pick".'
+    assert(teste_dados_draft["total_pick_fase2"] == total_pick_fase2), 'Diferença em: "total_pick_fase2".'
+    assert(teste_dados_draft["matchup_total"] == matchup_total), 'Diferença em: "matchup_total".'
+    assert(teste_dados_draft["matchup_vitorias"] == matchup_vitorias), 'Diferença em: "matchup_vitorias".'
+
+    print('\n\033[32mArquivo dados_draft.joblib gerado e validado em modelos_treinados!\033[m')
+
+contagem_pares = dados_draft["contagem_pares"]
+contagem_exposicao = dados_draft["contagem_exposicao"]
+contagem_respostas = dados_draft["contagem_respostas"]
+ban_fase2_por_pick = dados_draft["ban_fase2_por_pick"]
+total_pick_fase2 = dados_draft["total_pick_fase2"]
+matchup_total = dados_draft["matchup_total"]
+matchup_vitorias = dados_draft["matchup_vitorias"]
 
 # %%
+import modelos_cache
+
 limiar_flex = 0.10
 minimo_exposicao = 3
 limitar_ban_proprio = 0.03
@@ -956,7 +1020,9 @@ def gerar_Dna_Automatico(df_completo):
     contagem = df_completo.groupby(["champion", "position"]).size().unstack(fill_value = 0)
     dna_percentual = contagem.div(contagem.sum(axis = 1), axis = 0)
     return dna_percentual.to_dict(orient = "index")
-dna_campeoes = gerar_Dna_Automatico(tabela_liga_ativa)
+
+
+dna_campeoes = gerar_Dna_Automatico(tabela_final)
 
 
 def get_posicoes_ocupadas(lista_picks, dna_campeoes):
@@ -1073,7 +1139,7 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
     if modelo is not None:
         modelo_usado = modelo
     else:
-        modelo_usado = modelo_ia
+        modelo_usado = modelos_cache.buscar_modelos("GERAL")  # modelo_ia
 
     proibidos = list(bansTime1) + list(bansTime2) + list(picks_totais)
 
@@ -1170,7 +1236,6 @@ def sugeriPicks(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, pick
                 taxa_ameaca = contagem_bans_contra / total_jogos_contra
 
                 if taxa_ameaca > 0.30:
-
                     decaida = max(1.0 - (n_picks_feitos * 0.25), 0)
                     bonus_oportunidade = (taxa_ameaca * 0.40) * decaida
 
@@ -1339,7 +1404,8 @@ def sugeriBans(time1, bansTime1, picksTime1, time2, bansTime2, picksTime2, picks
     if modelo is not None:
         modelo_usado = modelo
     else:
-        modelo_usado = modelo_ia
+        #print('\033[33m[Aviso] Nenhum modelo foi passado. Usando o modelo "Geral" do cache\033[m')
+        modelo_usado = modelos_cache.buscar_modelos("GERAL") # modelo_ia
 
     proibidos = list(bansTime1 + bansTime2 + picks)
 
@@ -1586,7 +1652,7 @@ time2 = "RED Canids"
 
 historico_fearless = []
 
-resultado_serie = ordemPicksBans(time1, time2, 3)
+resultado_serie = ordemPicksBans(time1, time2, 1)
 
 for i, jogo in enumerate(resultado_serie):
     pFP, bFP, pLP, bLP = jogo

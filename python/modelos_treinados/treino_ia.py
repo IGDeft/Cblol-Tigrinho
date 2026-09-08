@@ -21,4 +21,15 @@ for l in ligas:
     saida = os.path.join(pasta_treino, nome_arquivo)
     joblib.dump(modelo, saida)
 
-print(f"\nTreinamento de todas as ligas concluidos.")
+carregar_encoders = {
+    "cod_camp" : cblol.cod_camp,
+    "cod_time" : cblol.cod_time,
+    "cod_pos" : cblol.cod_pos,
+    "colunas_treino" : getattr(cblol, "colunas_treino", None)
+}
+
+caminho_encoders = os.path.join(pasta_treino, "encoders.joblib")
+joblib.dump(carregar_encoders, caminho_encoders)
+print(f"Encoders Salvos em: {caminho_encoders}")
+
+print(f"\n\033[32mTreinamento de todas as ligas concluido.\033[m")

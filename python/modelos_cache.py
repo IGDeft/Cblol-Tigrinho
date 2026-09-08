@@ -14,8 +14,6 @@ def buscar_modelos(liga : str = "GERAL"):
         raise ValueError(f'Liga: "{liga}" não encontrada. Opções disponíveis: {ligas_treinadas}')
 
     if liga in _cache_modelos:
-        print(f'\nEnviando "{liga}" em cache...')
-
         return _cache_modelos[liga]
 
     caminho = os.path.join(pasta_modelos, f"modelo_{liga}.joblib")
@@ -23,7 +21,7 @@ def buscar_modelos(liga : str = "GERAL"):
     if not os.path.exists(caminho):
         raise FileNotFoundError(f'O modelo "{liga}" não foi encontrada em: {caminho}')
 
-    print(f'Carregando "{liga}" no disco pela 1x...')
+    print(f'Carregando "{liga}" no disco pela 1x...\n')
 
     modelo = joblib.load(caminho)
     _cache_modelos[liga] = modelo
