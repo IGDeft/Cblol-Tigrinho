@@ -800,79 +800,97 @@ df_p1_unificado = pd.concat([p1_t1, p1_t2])
 prioridade_p1 = df_p1_unificado.groupby(["teamname", "pick1"]).size().unstack(fill_value = 0)
 prioridade_p1 = prioridade_p1.div(prioridade_p1.sum(axis = 1), axis = 0).fillna(0)
 
-# Prioridade Bans_Fase1
 
-tabela_times_liga = tabela_liga_ativa[tabela_liga_ativa["position"] == "team"]
+# Prioridade bans_Fase1
 
-# Aliado
+def confronto_valido(tabela_liga_ativa):
 
-ban_fase1_fp = {}
-ban_fase1_lp = {}
-total_fp = {}
-total_lp = {}
+    df_times = tabela_liga_ativa[tabela_liga_ativa["position"] == "team"].copy()
 
-# Adversario
+    times_por_jogo = df_times.groupby("gameid")["teamname"].transform("nunique")
+    jogos_validos = df_times[times_por_jogo == 2]
 
-ban_contra_fp = {}
-ban_contra_lp = {}
-total_contra_fp = {}
-total_contra_lp = {}
+    confronto = jogos_validos.merge(jogos_validos, on = "gameid", suffixes = ("", "_adv"))
+    confronto = confronto[confronto["teamname"] != confronto["teamname_adv"]]
 
-for gameid, jogo_equipe in tabela_times_liga.groupby("gameid"):
+    return confronto
 
-    equipes = jogo_equipe["teamname"].unique()
 
-    if len(equipes) != 2:
-        continue
+def _contagem_bans_peso(df, alvo_cols, grupo_cols):
 
-    time_a = equipes[0]
-    time_b = equipes[1]
+    if df.empty:
+        return pd.Series(dtype = int)
+    
+    bans = df.melt(
+        id_vars = grupo_cols + ["peso_tempo", "gameid"],
+        value_vars = alvo_cols,
+        value_name = "campeao_banido"
+    ).dropna(subset = ["campeao_banido"])
 
-    for equipe in equipes:
+    if bans.empty:
+        return pd.Series(dtype = int)
 
-        adversario = time_b if equipe == time_a else time_a
+    bans_time = grupo_cols + ["campeao_banido"]
+    bans_peso = bans.groupby(bans_time)["peso_tempo"].sum().astype(int)
 
-        dados_time = jogo_equipe[jogo_equipe["teamname"] == equipe]
-        dados_adv = jogo_equipe[jogo_equipe["teamname"] == adversario]
+    return bans_peso
 
-        tem_fp = dados_time["firstPick"].values[0] == 1
 
-        ban_f1 = dados_time[["ban1", "ban2", "ban3"]].values.flatten().tolist()
-        bans_adv = dados_adv[["ban1", "ban2", "ban3", "ban4", "ban5"]].values.flatten()
+def indentificar_first_pick(bans_agrupados, valor_fp):
 
-        if tem_fp:
+    if bans_agrupados.empty:
+        return {}
 
-            total_fp[equipe] = total_fp.get(equipe, 0) + 1
-        
-            for ban in ban_f1:
+    status_fp = bans_agrupados.index.get_level_values("firstPick")
 
-                if pd.notna(ban):
-                    ban_fase1_fp[(equipe, ban)] = ban_fase1_fp.get((equipe, ban), 0) + 1
+    if valor_fp not in status_fp:
+        return {}
 
-        else:
-            total_lp[equipe] = total_lp.get(equipe, 0) + 1
+    return bans_agrupados.xs(valor_fp, level = "firstPick").to_dict()
 
-            for ban in ban_f1:
 
-                if pd.notna(ban):
-                    ban_fase1_lp[(equipe, ban)] = ban_fase1_lp.get((equipe, ban), 0) + 1
+def processar_bans(tabela_liga_ativa):
 
-        if tem_fp:
-            total_contra_fp[equipe] = total_contra_fp.get(equipe, 0) + 1
+    confronto = confronto_valido(tabela_liga_ativa)
+    confronto["peso_tempo"] = 1
 
-            for ban in bans_adv:
+    jogo_time = ["teamname", "firstPick"]
 
-                if pd.notna(ban):
-                    ban_contra_fp[(equipe, ban)] = ban_contra_fp.get((equipe, ban), 0) + 1
+    total_fp = confronto[confronto["firstPick"] == 1]["teamname"].value_counts().to_dict()
+    total_lp = confronto[confronto["firstPick"] == 0]["teamname"].value_counts().to_dict()
 
-        else:
-            total_contra_lp[equipe] = total_contra_lp.get(equipe, 0) + 1
+    bans_time = _contagem_bans_peso(confronto, ["ban1", "ban2", "ban3"], jogo_time)
 
-            for ban in bans_adv:
+    ban_fase1_fp = indentificar_first_pick(bans_time, 1)
+    ban_fase1_lp = indentificar_first_pick(bans_time, 0)
 
-                if pd.notna(ban):
-                    ban_contra_lp[(equipe, ban)] = ban_contra_lp.get((equipe, ban), 0) + 1
+    bans_adv = _contagem_bans_peso(confronto, ["ban1_adv", "ban2_adv", "ban3_adv", "ban4_adv", "ban5_adv"], jogo_time)
 
+    ban_contra_fp = indentificar_first_pick(bans_adv, 1)
+    ban_contra_lp = indentificar_first_pick(bans_adv, 0)
+
+    return {
+        "ban_fase1_fp" : ban_fase1_fp,
+        "ban_fase1_lp" : ban_fase1_lp,
+        "total_fp" : total_fp,
+        "total_lp" : total_lp,
+        "ban_contra_fp" : ban_contra_fp,
+        "ban_contra_lp" : ban_contra_lp,
+        "total_contra_fp" : dict(total_fp),
+        "total_contra_lp" : dict(total_lp)
+    }
+
+
+bans_stats = processar_bans(tabela_liga_ativa)
+
+ban_fase1_fp = bans_stats["ban_fase1_fp"]
+ban_fase1_lp = bans_stats["ban_fase1_lp"]
+total_fp = bans_stats["total_fp"]
+total_lp = bans_stats["total_lp"]
+ban_contra_fp = bans_stats["ban_contra_fp"]
+ban_contra_lp = bans_stats["ban_contra_lp"]
+total_contra_fp = bans_stats["total_contra_fp"]
+total_contra_lp = bans_stats["total_contra_lp"]
 
 # %%
 caminho_dados_draft = os.path.join(pasta_raiz, "modelos_treinados", "dados_draft.joblib")
