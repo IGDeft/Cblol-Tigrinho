@@ -769,39 +769,22 @@ if os.path.exists(caminho_encoders):
         print("Diferença encontrada: ", classes_atuais.symmetric_difference(classes_salvas))
 
 # %%
-prioridade_historica = tabela_liga_ativa.groupby(["teamname", "champion"]).size().unstack(fill_value = 0)
-prioridade_historica = prioridade_historica.div(prioridade_historica.sum(axis = 1), axis = 0).fillna(0)
+def calcular_decaimento(meia_vida_dias = 45):
 
-# Historico
-
-df_agrupados = tabela_liga_ativa.groupby([
-    "gameid", "teamname", "result", "firstPick", "game",
-    "ban1", "ban2", "ban3", "pick1", "pick2",
-    "pick3", "ban4", "ban5", "pick4", "pick5",
-]).size().reset_index() 
-
-df_confronto = pd.merge(df_agrupados, df_agrupados, on = ["gameid", "game"], suffixes = ("_time1", "_time2"))
-df_confronto = df_confronto[df_confronto["teamname_time1"] != df_confronto["teamname_time2"]]
-df_confronto = df_confronto.drop_duplicates(subset = ["gameid"], keep = "first")
-
-#display(df_confronto)
-
-# Prioridade FP
-
-p1_t1 = df_confronto[df_confronto["firstPick_time1"] == 1][["teamname_time1", "pick1_time1"]].rename(
-    columns = {"teamname_time1": "teamname", "pick1_time1": "pick1"}
-)
-p1_t2 = df_confronto[df_confronto["firstPick_time2"] == 1][["teamname_time2", "pick1_time2"]].rename(
-    columns = {"teamname_time2": "teamname", "pick1_time2": "pick1"}
-)
-
-df_p1_unificado = pd.concat([p1_t1, p1_t2])
-
-prioridade_p1 = df_p1_unificado.groupby(["teamname", "pick1"]).size().unstack(fill_value = 0)
-prioridade_p1 = prioridade_p1.div(prioridade_p1.sum(axis = 1), axis = 0).fillna(0)
+    return np.log(2) / meia_vida_dias
 
 
-# Prioridade bans_Fase1
+def calcular_peso_tempo(df, colunas_time, taxa_decaimento):
+
+    df = df.copy()
+
+    df["ultima_data"] = df.groupby(colunas_time)["date"].transform("max")
+
+    dias_passados = (df["ultima_data"] - df["date"]).dt.days
+    df["peso_tempo"] = np.exp(- taxa_decaimento * dias_passados)
+
+    return df
+
 
 def confronto_valido(tabela_liga_ativa):
 
@@ -815,6 +798,44 @@ def confronto_valido(tabela_liga_ativa):
 
     return confronto
 
+
+def processar_picks(tabela_liga_ativa, meia_vida_dias = 45):
+
+    decaimento = calcular_decaimento(meia_vida_dias)
+
+    jogadores = tabela_liga_ativa[tabela_liga_ativa["position"] != "team"].copy()
+    jogadores["date"] = pd.to_datetime(jogadores["date"])
+
+    jogadores_peso = calcular_peso_tempo(jogadores, "teamname", decaimento)
+
+    peso_champ = jogadores_peso.groupby(["teamname", "champion"])["peso_tempo"].sum()
+    peso_total_jogos = jogadores_peso.groupby("teamname")["peso_tempo"].sum()
+
+    prioridade_historica = peso_champ.div(peso_total_jogos, level = "teamname")
+    prioridade_historica = prioridade_historica.unstack(fill_value = 0).round(4)
+
+    # Prioridade FP
+
+    confronto = confronto_valido(tabela_liga_ativa)
+    confronto_fp = confronto[confronto["firstPick"] == 1].copy() 
+
+    confronto_fp["date"] = pd.to_datetime(confronto_fp["date"])
+
+    confronto_fp = calcular_peso_tempo(confronto_fp, "teamname", decaimento)
+
+    peso_champ_fp = confronto_fp.groupby(["teamname", "pick1"])["peso_tempo"].sum()
+    peso_fp_time = confronto_fp.groupby("teamname")["peso_tempo"].sum()
+
+    prioridade_p1 = peso_champ_fp.div(peso_fp_time, level = "teamname")
+    prioridade_p1 = prioridade_p1.unstack(fill_value = 0).round(4)
+
+    return {
+        "prioridade_historica" : prioridade_historica,
+        "prioridade_p1" : prioridade_p1
+    }
+
+
+# Prioridade bans_Fase1
 
 def _contagem_bans_peso(df, alvo_cols, grupo_cols):
 
@@ -831,7 +852,7 @@ def _contagem_bans_peso(df, alvo_cols, grupo_cols):
         return pd.Series(dtype = int)
 
     bans_time = grupo_cols + ["campeao_banido"]
-    bans_peso = bans.groupby(bans_time)["peso_tempo"].sum().astype(int)
+    bans_peso = bans.groupby(bans_time)["peso_tempo"].sum()
 
     return bans_peso
 
@@ -849,15 +870,19 @@ def indentificar_first_pick(bans_agrupados, valor_fp):
     return bans_agrupados.xs(valor_fp, level = "firstPick").to_dict()
 
 
-def processar_bans(tabela_liga_ativa):
+def processar_bans(tabela_liga_ativa, meia_vida_dias = 45):
+
+    decaimento = calcular_decaimento(meia_vida_dias)
 
     confronto = confronto_valido(tabela_liga_ativa)
-    confronto["peso_tempo"] = 1
+    confronto["date"] = pd.to_datetime(confronto["date"])
+    confronto = calcular_peso_tempo(confronto, "teamname", decaimento)
 
     jogo_time = ["teamname", "firstPick"]
 
-    total_fp = confronto[confronto["firstPick"] == 1]["teamname"].value_counts().to_dict()
-    total_lp = confronto[confronto["firstPick"] == 0]["teamname"].value_counts().to_dict()
+    peso_por_grupo = confronto.groupby(jogo_time)["peso_tempo"].sum()
+    total_fp = indentificar_first_pick(peso_por_grupo, 1)
+    total_lp = indentificar_first_pick(peso_por_grupo, 0)
 
     bans_time = _contagem_bans_peso(confronto, ["ban1", "ban2", "ban3"], jogo_time)
 
@@ -880,6 +905,10 @@ def processar_bans(tabela_liga_ativa):
         "total_contra_lp" : dict(total_lp)
     }
 
+picks_stats = processar_picks(tabela_liga_ativa)
+
+prioridade_historica = picks_stats["prioridade_historica"]
+prioridade_p1 = picks_stats["prioridade_p1"]
 
 bans_stats = processar_bans(tabela_liga_ativa)
 
@@ -1670,7 +1699,7 @@ time2 = "RED Canids"
 
 historico_fearless = []
 
-resultado_serie = ordemPicksBans(time1, time2, 1)
+resultado_serie = ordemPicksBans(time1, time2, 3)
 
 for i, jogo in enumerate(resultado_serie):
     pFP, bFP, pLP, bLP = jogo
